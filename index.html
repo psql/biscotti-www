@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BISCOTTI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -15,17 +18,25 @@
       background: #ff7a00;
       display: flex;
       flex-direction: column;
+      font-family: "M PLUS Rounded 1c", ui-rounded, "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+      text-align: center;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 2rem;
-      font-family: system-ui, -apple-system, sans-serif;
-      text-align: center;
     }
     h1 {
       color: #fff;
-      font-weight: 900;
+      font-weight: 800;
       font-size: clamp(4rem, 18vw, 16rem);
       letter-spacing: 0.02em;
+    }
+    .logo {
+      margin: 0 auto 1.25rem;
     }
     .logo img {
       width: 40px;
@@ -35,14 +46,17 @@
     p {
       color: #fff;
       font-size: 1.25rem;
+      font-weight: 800;
     }
   </style>
 </head>
 <body>
-  <h1>BISCOTTI</h1>
+  <main>
+    <h1>BISCOTTI</h1>
+    <p>すべて大丈夫だよ :)</p>
+  </main>
   <a class="logo" href="https://lingonberry.org" title="Lingonberry Organisation">
     <img src="lingonberry-logo.svg" alt="Lingonberry Organisation">
   </a>
-  <p>すべて大丈夫だよ :)</p>
 </body>
 </html>
