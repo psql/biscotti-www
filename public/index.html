@@ -6,9 +6,9 @@
   <title>🍪🐶 BISCOTTI</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍪</text></svg>">
   <meta name="theme-color" content="#ff7a00">
-  <meta name="description" content="a very friendly orange terminal. chat with biscotti, become a ともだち, get a woof when it's your time to play.">
+  <meta name="description" content="a very friendly orange terminal run by TanakiOS ── the operating system biscotti runs on. become a ともだち, get a woof when it's your time to play.">
   <meta property="og:title" content="BISCOTTI 🍪🐶 — sign up to play">
-  <meta property="og:description" content="a very friendly orange terminal. chat with biscotti, answer the HEFE questionnaire, make friends with his best friend pasquale. you'll get a woof when it's your time to play. すべて大丈夫だよ :)">
+  <meta property="og:description" content="a very friendly orange terminal. tanaki lingonberry (the OS biscotti runs on) takes your HEFE questionnaire while biscotti naps. you'll get a woof when it's your time to play. すべて大丈夫だよ :)">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://playbiscotti.com/">
   <meta name="twitter:card" content="summary">
@@ -300,7 +300,7 @@
     }
     #cmdhint b { color: rgba(255, 255, 255, 0.9); }
     @media (max-width: 899px) {
-      #cmdhint { bottom: 2.3rem; left: 0.8rem; font-size: 0.62rem; }
+      #cmdhint { bottom: calc(2.3rem + env(safe-area-inset-bottom)); left: 0.8rem; font-size: 0.62rem; }
     }
 
     /* ---------- friend chip ---------- */
@@ -341,6 +341,8 @@
     }
 
     #coinchip.pulse { animation: pulse 0.6s ease; }
+    #coinchip { text-decoration: none; }
+    #coinchip:hover { border-color: rgba(255, 255, 255, 0.85); }
 
     /* ---------- logs pane ---------- */
     #logs {
@@ -394,7 +396,7 @@
         right: 0;
         bottom: 0;
         border-top: 1px solid rgba(255, 244, 228, 0.25);
-        padding: 0.25rem 0.8rem;
+        padding: 0.25rem 0.8rem calc(0.25rem + env(safe-area-inset-bottom));
         font-size: 0.66rem;
       }
       .logs-title { display: none; }
@@ -408,6 +410,8 @@
     @media (max-width: 480px) {
       .boot { font-size: 0.6rem; letter-spacing: 0.14em; }
       #friendchip { font-size: 0.72rem; padding: 0.28rem 0.7rem; top: 0.8rem; right: 0.8rem; }
+      .b, .u, .sys, .tagline, .hint, .promptline input { text-shadow: none; }
+      #hero img { filter: none; }
       #coinchip { font-size: 0.66rem; padding: 0.24rem 0.65rem; top: 3rem; right: 0.8rem; }
       body.docked #hero { width: 88px !important; }
       .tagline { font-size: 1rem; }
@@ -453,7 +457,8 @@
   </div>
 
   <div id="friendchip" title="friends on the list">🍪 ともだち <b id="friendcount">…</b></div>
-  <div id="coinchip" title="creator fees donated so far">🪙 donated <b id="coinval">…</b></div>
+  <a id="coinchip" href="https://thegivingblock.com/donate/sesame-workshop/" target="_blank" rel="noopener"
+     title="creator fees donated to Sesame Workshop — click to give too">🪙 donated <b id="coinval">…</b></a>
 
   <aside id="logs">
     <div class="logs-title">/var/log/biscotti ── ログ</div>
@@ -480,7 +485,7 @@
     nameinp.focus();
     document.addEventListener("pointerdown", (e) => {
       if (e.target.closest("input, a")) return;
-      setTimeout(() => (document.body.classList.contains("docked") ? chatinp : nameinp).focus(), 0);
+      (document.body.classList.contains("docked") ? chatinp : nameinp).focus();
     });
     document.addEventListener("keydown", (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -584,9 +589,9 @@
       "somewhere it is 3pm and someone is having a snack. 平和。",
     ];
     const PETS = [
-      "…！ *happy cookie noises* もっと撫でて。",
-      "*wiggles* わーい。",
-      "*leans into your hand* ずっとここにいて。",
+      "forwarding your pets to biscotti… *happy cookie noises* もっと、he says.",
+      "*biscotti wiggles in his sleep* わーい。",
+      "*biscotti leans into your hand* ずっとここにいて。",
     ];
 
     async function runCommand(raw) {
@@ -599,10 +604,10 @@
           sysLine(`ともだち count: ${friendcount.textContent} friends on the list. 🍪`);
           break;
         case "jar":
-          sysLine(`donation jar: ${coinval.textContent === "…" ? "warming up…" : coinval.textContent} in creator fees donated so far. 🪙`);
+          sysLine(`donation jar: ${coinval.textContent === "…" ? "warming up…" : coinval.textContent} in creator fees donated to sesame workshop. 🪙\n→ thegivingblock.com/donate/sesame-workshop`);
           break;
         case "woof":
-          sysLine("わん！ woof. 🐶");
+          sysLine("（biscotti, from the other room）わん！ 🐶");
           break;
         case "pet":
           sysLine(PETS[Math.floor(Math.random() * PETS.length)]);
@@ -661,7 +666,7 @@
       "ふふ。i'm listening. try /help if you're bored.",
       "that's nice. °˖✧ tell me more, or /help.",
       "noted. i write everything down in crumbs.",
-      "わん？",
+      "biscotti（asleep, dreaming）: わん…？",
     ];
     async function idleLoop() {
       while (true) {
@@ -711,7 +716,8 @@
       echo(state.name);
       await sleep(FAST ? 30 : 500);
       await say(`こんにちは、${state.name}。`);
-      await say("i'm biscotti. 🍪 nice to meet you. すてきな名前。");
+      await say("i'm tanaki lingonberry ── the operating system biscotti runs on. タナキと呼んで。");
+      await say("biscotti is napping right now. 🍪 i keep the guest list warm. すてきな名前, by the way.");
       await say("we should get to know each other a little before you can play. いい？");
 
       state.email = await ask(
@@ -776,7 +782,7 @@
       }
       await say("すべて大丈夫だよ :)");
       await socialMenu([]);
-      await say("i'll send you a woof when it's your time to play. わん。またね ♥");
+      await say("biscotti will send you a woof when it's your time to play. わん。またね ♥");
       idleLoop();
     }
 
@@ -801,7 +807,7 @@
     }
 
     async function socialMenu(existing) {
-      await say("one more thing. i have a best friend. his name is pasquale. 人間だよ。");
+      await say("one more thing. biscotti has a best friend. his name is pasquale. 人間だよ。");
       await say("if you become real internet friends with him — and he follows you back — you'll get in sooner. 本当。");
       const connected = new Set((existing || []).map((s) => s.provider));
       while (true) {
@@ -860,7 +866,7 @@
         await say(`i remember your ${me.socials.map((s) => "@" + s.handle).join(", ")}. ちゃんと覚えてる。`);
       }
       await socialMenu(me.socials || []);
-      await say("i'll send you a woof when it's your time to play. わん。またね ♥");
+      await say("biscotti will send you a woof when it's your time to play. わん。またね ♥");
       idleLoop();
     }
     returningFriend();
@@ -945,10 +951,10 @@
       });
       events.addEventListener("donation", (e) => {
         const d = JSON.parse(e.data);
-        setJar(d.total);
-        logLine(`★ fees donated: ${prettySol(d.amount)} → jar now ${prettySol(d.total)} ♥`, "friend");
+        setJar(d.totalUsd);
+        logLine(`★ fees donated: ${prettyUsd(d.amountUsd)} → jar now ${prettyUsd(d.totalUsd)} ♥`, "friend");
         if (document.body.classList.contains("docked")) {
-          sysLine(`＊ ${prettySol(d.amount)} in fees just went to the donation jar. ありがとう ♥`);
+          sysLine(`＊ ${prettyUsd(d.amountUsd)} in fees just went to sesame workshop's jar. ありがとう ♥`);
         }
       });
     } catch {}
@@ -956,10 +962,11 @@
     /* ---------- donation jar (claimed creator fees) ---------- */
     const coinval = document.getElementById("coinval");
     const coinchip = document.getElementById("coinchip");
-    const prettySol = (n) => "◎" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 4 });
+    const prettyUsd = (n) => "$" + Number(n).toLocaleString("en-US",
+      Number(n) >= 100 ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     let firstJar = true;
-    function setJar(sol) {
-      const pretty = prettySol(sol);
+    function setJar(usd) {
+      const pretty = prettyUsd(usd);
       if (coinval.textContent !== pretty) {
         coinval.textContent = pretty;
         coinchip.classList.remove("pulse");
@@ -974,7 +981,7 @@
     async function pollDonations() {
       try {
         const d = await (await fetch("/api/donations", { headers: { "Accept": "application/json" } })).json();
-        if (d && typeof d.donatedSol === "number") setJar(d.donatedSol);
+        if (d && typeof d.donatedUsd === "number") setJar(d.donatedUsd);
       } catch {}
     }
     pollDonations();

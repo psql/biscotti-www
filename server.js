@@ -200,11 +200,30 @@ app.get("/thanks", (_req, res) => {
 const PROVIDERS = ["instagram", "x", "tiktok"];
 
 // Donation jar: the fee-claimer reports each claimed creator fee here.
+let solPrice = { at: 0, usd: 0 };
+async function solUsd() {
+  if (Date.now() - solPrice.at < 300000 && solPrice.usd) return solPrice.usd;
+  try {
+    const r = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
+      { signal: AbortSignal.timeout(8000) }
+    );
+    const j = await r.json();
+    if (j?.solana?.usd) solPrice = { at: Date.now(), usd: j.solana.usd };
+  } catch {}
+  return solPrice.usd || 0;
+}
+
 app.get("/api/donations", async (_req, res) => {
   const { rows: [d] } = await pool.query(
     "SELECT COALESCE(sum(amount_sol), 0) AS sol, count(*)::int AS n FROM donations"
   );
-  res.json({ donatedSol: Number(d.sol), count: d.n });
+  const price = await solUsd();
+  res.json({
+    donatedSol: Number(d.sol),
+    donatedUsd: Math.round(Number(d.sol) * price * 100) / 100,
+    count: d.n,
+  });
 });
 
 app.post("/api/donations", async (req, res) => {
@@ -224,7 +243,11 @@ app.post("/api/donations", async (req, res) => {
   const { rows: [d] } = await pool.query(
     "SELECT COALESCE(sum(amount_sol), 0) AS sol FROM donations"
   );
-  broadcast("donation", { amount, total: Number(d.sol) });
+  const price = await solUsd();
+  broadcast("donation", {
+    amountUsd: Math.round(amount * price * 100) / 100,
+    totalUsd: Math.round(Number(d.sol) * price * 100) / 100,
+  });
   res.json({ ok: true });
 });
 
