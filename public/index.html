@@ -712,13 +712,33 @@
       "5": "I dunk it in something weird",
     };
 
+    async function fetchGreeting(kind, name) {
+      const fallback = kind === "new"
+        ? [`こんにちは、${name}。`,
+           "i'm tanaki lingonberry ── the operating system biscotti runs on. タナキと呼んで。",
+           "biscotti is napping right now. 🍪 i keep the guest list warm.",
+           "we should get to know each other a little before you can play. いい？"]
+        : [`おかえり、${name}。hi again :)`,
+           "you're already on my list. すべて大丈夫だよ。"];
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 9000);
+        const r = await fetch(`/api/greeting?kind=${kind}&name=${encodeURIComponent(name)}`,
+          { headers: { "Accept": "application/json" }, signal: ctrl.signal });
+        clearTimeout(timer);
+        const d = await r.json();
+        if (Array.isArray(d.lines) && d.lines.length) return d.lines;
+      } catch {}
+      return fallback;
+    }
+
     async function chat() {
       echo(state.name);
+      const greetingPromise = fetchGreeting("new", state.name);
       await sleep(FAST ? 30 : 500);
-      await say(`こんにちは、${state.name}。`);
-      await say("i'm tanaki lingonberry ── the operating system biscotti runs on. タナキと呼んで。");
-      await say("biscotti is napping right now. 🍪 i keep the guest list warm. すてきな名前, by the way.");
-      await say("we should get to know each other a little before you can play. いい？");
+      for (const line of await greetingPromise) {
+        await say(line);
+      }
 
       state.email = await ask(
         "where can i reach you? your email, please.（メールアドレス）",
@@ -857,11 +877,13 @@
       if (!me || !me.name) return;
       state.name = me.name;
       nameinp.blur();
+      const greetingPromise = fetchGreeting("returning", me.name);
       await sleep(FAST ? 100 : 2600);
       dockLogo();
       await sleep(FAST ? 30 : 700);
-      await say(`おかえり、${me.name}。hi again :)`);
-      await say("you're already on my list. すべて大丈夫だよ。");
+      for (const line of await greetingPromise) {
+        await say(line);
+      }
       if (me.socials && me.socials.length) {
         await say(`i remember your ${me.socials.map((s) => "@" + s.handle).join(", ")}. ちゃんと覚えてる。`);
       }

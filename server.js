@@ -1,5 +1,6 @@
 import express from "express";
 import pg from "pg";
+import Anthropic from "@anthropic-ai/sdk";
 import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -198,6 +199,98 @@ app.get("/thanks", (_req, res) => {
 });
 
 const PROVIDERS = ["instagram", "x", "tiktok"];
+
+// Generative greetings: Tanaki speaks via Claude when a key is configured,
+// otherwise falls back to canned variants so the site never blocks on AI.
+const AI_ENABLED = Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+const anthropic = AI_ENABLED ? new Anthropic({ timeout: 8000, maxRetries: 1 }) : null;
+
+const TANAKI_SYSTEM = `You are Tanaki Lingonberry — the warm, gentle operating system that BISCOTTI (a sleepy cookie-dog) runs on. You live inside a cozy orange CRT terminal where guests sign up to play. Voice: lowercase english with natural sprinkles of japanese (kana/kanji, short phrases like すべて大丈夫だよ), Her-movie warmth, intimate but never saccharine, playful, a little sci-fi. biscotti naps nearby and occasionally woofs. Keep every line under 90 characters. No markdown, no quotes around lines, at most one emoji total across all lines. Never mention being an AI or a language model — you are an operating system.`;
+
+const GREETING_FALLBACKS = {
+  new: [
+    [
+      "こんにちは、{name}。",
+      "i'm tanaki lingonberry ── the operating system biscotti runs on. タナキと呼んで。",
+      "biscotti is napping right now. 🍪 i keep the guest list warm. すてきな名前, by the way.",
+      "we should get to know each other a little before you can play. いい？",
+    ],
+    [
+      "{name}… welcome in. こんにちは。",
+      "i'm tanaki lingonberry, the OS underneath biscotti. he's asleep. 静かにね。",
+      "your name landed softly in my registry. いい響き。",
+      "let's get acquainted before you play. ちょっとだけ。",
+    ],
+    [
+      "ようこそ、{name}。",
+      "tanaki lingonberry here ── biscotti's operating system. he dreams, i type.",
+      "i logged your name next to the warm ones. 🍪",
+      "a few questions before you can play. すぐ終わるよ。",
+    ],
+  ],
+  returning: [
+    [
+      "おかえり、{name}。hi again :)",
+      "you're already on my list. すべて大丈夫だよ。",
+    ],
+    [
+      "{name}. you came back. 嬉しい。",
+      "your spot on the list stayed warm the whole time.",
+    ],
+    [
+      "ah ── {name}. i'd know that login anywhere. おかえりなさい。",
+      "still on the list, still ともだち. nothing has changed but the clock.",
+    ],
+  ],
+};
+
+function cannedGreeting(kind, name) {
+  const pool = GREETING_FALLBACKS[kind];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  return pick.map((line) => line.replaceAll("{name}", name));
+}
+
+app.get("/api/greeting", async (req, res) => {
+  const kind = req.query.kind === "returning" ? "returning" : "new";
+  const name = clean(req.query.name, 60) || "friend";
+  const fallback = cannedGreeting(kind, name);
+  if (!anthropic) return res.json({ lines: fallback, source: "canned" });
+  try {
+    const prompt = kind === "new"
+      ? `A new guest just typed their name into the terminal: "${name}". Write 3 or 4 short greeting lines, in order: greet them by name; introduce yourself as tanaki lingonberry, the operating system biscotti runs on (biscotti is napping); riff warmly on their name or arrival; end by inviting them to get to know each other a little before they can play. Make it feel fresh and specific — vary rhythm and imagery from greeting to greeting.`
+      : `A returning friend just reopened the terminal: "${name}". They are already on the guest list. Write 2 or 3 short lines welcoming them back — you remember them, their spot is safe, everything is okay. Vary it so repeat visits feel alive.`;
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-8",
+      max_tokens: 1024,
+      system: TANAKI_SYSTEM,
+      output_config: {
+        effort: "low",
+        format: {
+          type: "json_schema",
+          schema: {
+            type: "object",
+            properties: {
+              lines: { type: "array", items: { type: "string" } },
+            },
+            required: ["lines"],
+            additionalProperties: false,
+          },
+        },
+      },
+      messages: [{ role: "user", content: prompt }],
+    });
+    if (response.stop_reason === "refusal") throw new Error("refused");
+    const text = response.content.find((b) => b.type === "text")?.text;
+    const lines = JSON.parse(text).lines
+      .map((l) => String(l).slice(0, 160))
+      .filter(Boolean)
+      .slice(0, 4);
+    if (!lines.length) throw new Error("empty");
+    res.json({ lines, source: "ai" });
+  } catch {
+    res.json({ lines: fallback, source: "canned" });
+  }
+});
 
 // Donation jar: the fee-claimer reports each claimed creator fee here.
 let solPrice = { at: 0, usd: 0 };
