@@ -56,6 +56,15 @@ await pool.query(`
   )
 `);
 
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS donations (
+    id SERIAL PRIMARY KEY,
+    amount_sol NUMERIC NOT NULL,
+    tx TEXT UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )
+`);
+
 const COOKIE_SECRET = process.env.COOKIE_SECRET || "biscotti-jar-secret";
 const signId = (id) =>
   crypto.createHmac("sha256", COOKIE_SECRET).update(String(id)).digest("hex").slice(0, 32);
@@ -85,6 +94,7 @@ async function friendCount() {
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 app.use((req, _res, next) => {
   if (req.method === "GET" && (req.path === "/" || req.path === "/play")) {
     pool.query("INSERT INTO page_views (path) VALUES ($1)", [req.path])
@@ -189,6 +199,35 @@ app.get("/thanks", (_req, res) => {
 
 const PROVIDERS = ["instagram", "x", "tiktok"];
 
+// Donation jar: the fee-claimer reports each claimed creator fee here.
+app.get("/api/donations", async (_req, res) => {
+  const { rows: [d] } = await pool.query(
+    "SELECT COALESCE(sum(amount_sol), 0) AS sol, count(*)::int AS n FROM donations"
+  );
+  res.json({ donatedSol: Number(d.sol), count: d.n });
+});
+
+app.post("/api/donations", async (req, res) => {
+  const key = process.env.DONATION_KEY;
+  if (!key || req.get("x-donation-key") !== key) {
+    return res.status(401).json({ ok: false });
+  }
+  const amount = Number(req.body.amount_sol);
+  const tx = req.body.tx ? String(req.body.tx).slice(0, 120) : null;
+  if (!(amount > 0) || amount > 100000) return res.status(400).json({ ok: false });
+  try {
+    await pool.query("INSERT INTO donations (amount_sol, tx) VALUES ($1, $2)", [amount, tx]);
+  } catch (err) {
+    if (err.code === "23505") return res.json({ ok: true, dup: true });
+    throw err;
+  }
+  const { rows: [d] } = await pool.query(
+    "SELECT COALESCE(sum(amount_sol), 0) AS sol FROM donations"
+  );
+  broadcast("donation", { amount, total: Number(d.sol) });
+  res.json({ ok: true });
+});
+
 app.get("/api/me", async (req, res) => {
   const id = friendIdFrom(req);
   if (!id) return res.json({});
@@ -200,6 +239,18 @@ app.get("/api/me", async (req, res) => {
     "SELECT provider, handle FROM social_connections WHERE registration_id = $1", [id]
   );
   res.json({ name: me.name, socials });
+});
+
+app.post("/api/logout", async (req, res) => {
+  const id = friendIdFrom(req);
+  if (id) {
+    try {
+      await pool.query("DELETE FROM registrations WHERE id = $1", [id]);
+      broadcast("count", { count: await friendCount() });
+    } catch {}
+  }
+  res.append("Set-Cookie", "bfriend=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
+  res.json({ ok: true });
 });
 
 app.post("/api/socials", async (req, res) => {
