@@ -490,7 +490,10 @@ app.get("/api/me", async (req, res) => {
   const { rows: socials } = await pool.query(
     "SELECT provider, handle FROM social_connections WHERE registration_id = $1", [id]
   );
-  res.json({ name: me.name, socials });
+  const { rows: [rank] } = await pool.query(
+    "SELECT count(*)::int AS n FROM registrations WHERE id <= $1", [id]
+  );
+  res.json({ name: me.name, socials, friendNumber: rank.n });
 });
 
 app.post("/api/logout", async (req, res) => {
