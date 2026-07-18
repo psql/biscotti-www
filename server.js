@@ -390,18 +390,28 @@ Address them by name occasionally, not every time.`,
 });
 
 // Donation jar: the fee-claimer reports each claimed creator fee here.
+const SOL_USD_FALLBACK = 75; // only used before any live price has been fetched
 let solPrice = { at: 0, usd: 0 };
 async function solUsd() {
   if (Date.now() - solPrice.at < 300000 && solPrice.usd) return solPrice.usd;
   try {
     const r = await fetch(
       "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
-      { signal: AbortSignal.timeout(8000) }
+      { signal: AbortSignal.timeout(6000) }
     );
     const j = await r.json();
-    if (j?.solana?.usd) solPrice = { at: Date.now(), usd: j.solana.usd };
+    if (j?.solana?.usd) solPrice = { at: Date.now(), usd: Number(j.solana.usd) };
   } catch {}
-  return solPrice.usd || 0;
+  if (Date.now() - solPrice.at >= 300000 || !solPrice.usd) {
+    try {
+      const r = await fetch("https://api.coinbase.com/v2/prices/SOL-USD/spot",
+        { signal: AbortSignal.timeout(6000) });
+      const j = await r.json();
+      const usd = Number(j?.data?.amount);
+      if (usd > 0) solPrice = { at: Date.now(), usd };
+    } catch {}
+  }
+  return solPrice.usd || SOL_USD_FALLBACK;
 }
 
 // BISCOTTI is a pump.fun charity coin: swap fees flow to the charity wallet.
