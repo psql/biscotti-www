@@ -387,6 +387,27 @@ async function solUsd() {
   return solPrice.usd || 0;
 }
 
+// BISCOTTI is a pump.fun charity coin: swap fees flow to the charity wallet.
+// True donated total = that wallet's cumulative fees minus its pre-launch
+// baseline, fetched live and cached; launch-day figure is the offline floor.
+const CHARITY_WALLET = "1u4k6SowzbLSb5KYBt64pxpHi2XkiqUjSZtZdLideAd";
+const CHARITY_BASELINE_SOL = 72.835698365; // cumulative on 2026-07-16, day before launch
+const CHARITY_FLOOR_SOL = 418.065129135;   // launch-day fees for this coin
+let charityCache = { at: 0, sol: CHARITY_FLOOR_SOL };
+async function charityFeesSol() {
+  if (Date.now() - charityCache.at < 300000) return charityCache.sol;
+  try {
+    const r = await fetch(
+      `https://swap-api.pump.fun/v1/creators/${CHARITY_WALLET}/fees?interval=1d&limit=400`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    const rows = await r.json();
+    const sol = Number(rows[rows.length - 1].cumulativeCreatorFeeSOL) - CHARITY_BASELINE_SOL;
+    if (sol > 0) charityCache = { at: Date.now(), sol };
+  } catch {}
+  return charityCache.sol;
+}
+
 async function donationTotals() {
   const { rows: [d] } = await pool.query(
     `SELECT COALESCE(sum(amount_sol), 0) AS sol,
@@ -395,9 +416,11 @@ async function donationTotals() {
      FROM donations`
   );
   const price = await solUsd();
+  const charitySol = await charityFeesSol();
+  const totalSol = Number(d.sol) + charitySol;
   return {
-    donatedSol: Number(d.sol),
-    donatedUsd: Math.round((Number(d.usd) + Number(d.sol) * price) * 100) / 100,
+    donatedSol: Math.round(totalSol * 1e6) / 1e6,
+    donatedUsd: Math.round((Number(d.usd) + totalSol * price) * 100) / 100,
     count: d.n,
   };
 }
@@ -410,6 +433,10 @@ app.post("/api/donations", async (req, res) => {
   const key = process.env.DONATION_KEY;
   if (!key || req.get("x-donation-key") !== key) {
     return res.status(401).json({ ok: false });
+  }
+  if (req.body.delete_tx) {
+    await pool.query("DELETE FROM donations WHERE tx = $1", [String(req.body.delete_tx).slice(0, 120)]);
+    return res.json({ ok: true, deleted: true });
   }
   const amountSol = req.body.amount_sol != null ? Number(req.body.amount_sol) : null;
   const amountUsd = req.body.amount_usd != null ? Number(req.body.amount_usd) : null;
