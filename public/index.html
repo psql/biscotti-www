@@ -123,12 +123,11 @@
     #nameform { animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 2.45s both; }
     .hint { animation: rise 0.9s ease 2.8s both; }
     .lingon { animation: rise 0.9s ease 3.1s both; }
-    #friendchip { animation: rise 1s ease 2.9s both; }
     #logs { animation: rise 1s ease 2.7s both; }
     body.docked #hero { animation: none; }
     @media (prefers-reduced-motion: reduce) {
       #poweron { display: none; }
-      .boot, #hero, .tagline, #nameform, .hint, .lingon, #friendchip, #coinchip, #logs { animation: none; }
+      .boot, #hero, .tagline, #nameform, .hint, .lingon, #coinchip, #logs { animation: none; }
     }
 
     /* ---------- landing ---------- */
@@ -341,28 +340,12 @@
     }
 
     /* ---------- friend chip ---------- */
-    #friendchip {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      z-index: 20;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: #fff;
-      background: rgba(255, 255, 255, 0.14);
-      border: 2px solid rgba(255, 255, 255, 0.55);
-      border-radius: 999px;
-      padding: 0.35rem 0.9rem;
-      backdrop-filter: blur(3px);
-    }
-    #friendchip b { color: #fff; }
-    #friendchip.pulse { animation: pulse 0.6s ease; }
     @keyframes pulse {
       30% { transform: scale(1.18); background: rgba(255, 255, 255, 0.3); }
     }
     #coinchip {
       position: fixed;
-      top: 3.6rem;
+      top: 1rem;
       right: 1rem;
       z-index: 20;
       font-size: 0.78rem;
@@ -424,7 +407,6 @@
       }
       #screen { padding-right: calc(290px + 4vw); }
       #landing { right: 290px; }
-      #friendchip { right: calc(290px + 1.2rem); }
       #coinchip { right: calc(290px + 1.2rem); }
     }
     @media (max-width: 899px) {
@@ -446,7 +428,6 @@
     .boot { text-align: center; padding: 0 1rem; }
     @media (max-width: 480px) {
       .boot { font-size: 0.6rem; letter-spacing: 0.14em; }
-      #friendchip { font-size: 0.72rem; padding: 0.28rem 0.7rem; top: 0.8rem; right: 0.8rem; }
       .b, .u, .sys, .tagline, .hint, .promptline input { text-shadow: none; }
       #hero img { filter: none; }
       #coinchip { font-size: 0.66rem; padding: 0.24rem 0.65rem; top: 3rem; right: 0.8rem; }
@@ -462,7 +443,6 @@
       #logs { width: 230px; }
       #screen { padding-right: calc(230px + 4vw); }
       #landing { right: 230px; }
-      #friendchip { right: calc(230px + 1.2rem); }
       #coinchip { right: calc(230px + 1.2rem); }
     }
   </style>
@@ -494,7 +474,6 @@
   </div>
 
   <div id="progress" title="your signup progress"></div>
-  <div id="friendchip" title="friends on the list">🍪 ともだち <b id="friendcount">…</b></div>
   <a id="coinchip" href="https://thegivingblock.com/donate/sesame-workshop/" target="_blank" rel="noopener"
      title="creator fees donated to Sesame Workshop — click to give too">🪙 donated <b id="coinval">…</b></a>
 
@@ -602,7 +581,7 @@
 
     const HELP = `available commands ── コマンド一覧
   /help     this list
-  /friends  how many ともだち are on the list
+  /friends  which friend number you are
   /jar      donation jar status 🪙
   /woof     woof
   /pet      pet biscotti
@@ -638,9 +617,19 @@
         case "help":
           sysLine(HELP);
           break;
-        case "friends":
-          sysLine(`ともだち count: ${friendcount.textContent} friends on the list. 🍪`);
+        case "friends": {
+          try {
+            const me = await (await fetch("/api/me", { headers: { "Accept": "application/json" } })).json();
+            if (me && me.friendNumber) {
+              sysLine(`you are friend #${me.friendNumber}. ともだち。🍪`);
+            } else {
+              sysLine("you're not on my list yet — tell me your name and we'll fix that.");
+            }
+          } catch {
+            sysLine("my registry is rubbing its eyes. try again in a moment.");
+          }
           break;
+        }
         case "jar":
           sysLine(`donation jar: ${coinval.textContent === "…" ? "warming up…" : coinval.textContent} in creator fees donated to sesame workshop. 🪙\n→ thegivingblock.com/donate/sesame-workshop`);
           break;
@@ -1002,6 +991,9 @@
       for (const line of await greetingPromise) {
         await say(line);
       }
+      if (me.friendNumber) {
+        await say(`you're friend #${me.friendNumber}, in case you forgot. ともだち。`);
+      }
       if (me.socials && me.socials.length) {
         await say(`i remember your ${me.socials.map((s) => "@" + s.handle).join(", ")}. ちゃんと覚えてる。`);
       }
@@ -1013,8 +1005,6 @@
 
     /* ---------- logs pane + live events ---------- */
     const logbody = document.getElementById("logbody");
-    const friendcount = document.getElementById("friendcount");
-    const friendchip = document.getElementById("friendchip");
 
     function logLine(text, cls = "") {
       const div = document.createElement("div");
@@ -1034,13 +1024,6 @@
       div.innerHTML = fmt(text);
       log.appendChild(div);
       scrollDown();
-    }
-
-    function setCount(n) {
-      friendcount.textContent = n;
-      friendchip.classList.remove("pulse");
-      void friendchip.offsetWidth;
-      friendchip.classList.add("pulse");
     }
 
     const BOOT = [
@@ -1075,15 +1058,11 @@
 
     try {
       const events = new EventSource("/api/events");
-      events.addEventListener("count", (e) => {
-        setCount(JSON.parse(e.data).count);
-      });
       events.addEventListener("friend", (e) => {
         const d = JSON.parse(e.data);
-        setCount(d.count);
         logLine(`★ new friend: ${d.name}（${d.environment}）`, "friend");
         if (document.body.classList.contains("docked") && d.name !== state.name) {
-          sysLine(`＊ ${d.name} just became friend #${d.count}. ようこそ。`);
+          sysLine(`＊ ${d.name} just joined the list. ようこそ。`);
         }
       });
       let jarLine = null;
