@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BISCOTTI — you're in!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      background: #ff7a00;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      font-family: "M PLUS Rounded 1c", ui-rounded, "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+      color: #fff;
+      text-align: center;
+      padding: 1rem;
+    }
+    .cookie { font-size: 4rem; }
+    h1 { font-size: 2rem; }
+    p { font-weight: 800; font-size: 1.15rem; }
+    a { color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="cookie">🍪</div>
+  <h1>You're on the list!</h1>
+  <p>すべて大丈夫だよ :)<br>We'll email you when it's time to play.</p>
+  <p><a href="/">← back home</a></p>
+  <script>
+    if (new URLSearchParams(location.search).has("again")) {
+      document.querySelector("h1").textContent = "You were already on the list!";
+    }
+  </script>
+</body>
+</html>
