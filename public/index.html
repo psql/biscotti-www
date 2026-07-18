@@ -1,79 +1,642 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BISCOTTI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    body {
-      min-height: 100vh;
-      background: #ff7a00;
-      display: flex;
-      flex-direction: column;
-      font-family: "M PLUS Rounded 1c", ui-rounded, "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
-      text-align: center;
+    html, body {
+      height: 100%;
     }
-    main {
-      flex: 1;
+    body {
+      min-height: 100dvh;
+      background: #ff7a00;
+      background: radial-gradient(120% 120% at 50% 0%, #ff8d1e 0%, #ff7a00 55%, #f26a00 100%);
+      font-family: "M PLUS 1 Code", ui-monospace, "Hiragino Maru Gothic ProN", monospace;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* ---------- landing ---------- */
+    #landing {
+      position: fixed;
+      inset: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2rem;
+      gap: 1.6rem;
+      padding: 1rem;
+      transition: opacity 0.6s ease;
+      z-index: 2;
     }
-    h1 {
-      width: min(88vw, 1400px);
+    body.docked #landing {
+      opacity: 0;
+      pointer-events: none;
     }
-    h1 img {
+    .boot {
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      color: rgba(255, 244, 228, 0.75);
+      text-transform: uppercase;
+    }
+    .tagline {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #fff;
+    }
+    #hero {
+      width: min(88vw, 1100px);
+      z-index: 10;
+    }
+    #hero img {
       width: 100%;
       height: auto;
       display: block;
     }
-    .logo {
-      margin: 0 auto 1.25rem;
+    #hero.flying {
+      position: fixed;
+      transition: top 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+                  left 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+                  width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
     }
-    .logo img {
-      width: 40px;
-      height: 40px;
+
+    /* ---------- shared prompt / input ---------- */
+    .promptline {
+      display: flex;
+      align-items: baseline;
+      width: min(92vw, 620px);
+    }
+    .promptline .arrow {
+      color: #ffdcb0;
+      font-weight: 700;
+      margin-right: 0.55rem;
+    }
+    .promptline input {
+      flex: 1;
+      font: inherit;
+      font-size: 1.05rem;
+      font-weight: 700;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid rgba(255, 244, 228, 0.45);
+      padding: 0.15rem 0.1rem 0.35rem;
+      outline: none;
+      color: #fff;
+      caret-color: #fff;
+      border-radius: 0;
+    }
+    .promptline input:focus {
+      border-bottom-color: rgba(255, 244, 228, 0.9);
+    }
+    .promptline input::placeholder {
+      color: rgba(255, 244, 228, 0.55);
+      font-weight: 500;
+    }
+    .hint {
+      font-size: 0.78rem;
+      color: rgba(255, 244, 228, 0.7);
+    }
+    .lingon {
+      position: absolute;
+      bottom: 1.2rem;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .lingon img {
+      width: 36px;
+      height: 36px;
       display: block;
     }
-    p {
+
+    /* ---------- chat ---------- */
+    #screen {
+      position: fixed;
+      inset: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 5.2rem 5vw 45vh;
+      line-height: 1.95;
+      font-size: 1.05rem;
+      opacity: 0;
+      transition: opacity 0.6s ease 0.35s;
+      scrollbar-width: none;
+    }
+    #screen::-webkit-scrollbar { display: none; }
+    body.docked #screen { opacity: 1; }
+    @media (min-width: 768px) {
+      #screen {
+        font-size: 1.2rem;
+        padding: 6rem 6vw 40vh;
+      }
+    }
+    .b {
       color: #fff;
-      font-size: 1.25rem;
-      font-weight: 800;
+      white-space: pre-wrap;
+      margin-bottom: 0.4rem;
+      max-width: 46em;
     }
-    .play {
+    .b .jp { color: #ffe7c2; }
+    .u {
+      color: #fff;
+      font-weight: 700;
+      white-space: pre-wrap;
+      margin: 0.5rem 0 1rem;
+      max-width: 46em;
+    }
+    .u::before {
+      content: "＞ ";
+      color: #ffd9a8;
+      font-weight: 400;
+    }
+    .cursor {
       display: inline-block;
+      width: 0.62em;
+      height: 1.15em;
       background: #fff;
-      color: #ff7a00;
-      font-weight: 800;
-      font-size: 1.25rem;
-      text-decoration: none;
-      border-radius: 999px;
-      padding: 0.9rem 2.2rem;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-      transition: transform 0.1s ease;
+      vertical-align: text-bottom;
+      margin-left: 2px;
+      animation: blink 1.05s steps(1) infinite;
     }
-    .play:hover { transform: scale(1.05); }
-    .play:active { transform: scale(0.97); }
+    @keyframes blink { 50% { opacity: 0; } }
+    #chatline {
+      display: none;
+      margin-top: 0.6rem;
+      width: min(88vw, 620px);
+    }
+    #chatline.on { display: flex; }
+    .sys {
+      color: rgba(255, 244, 228, 0.85);
+      font-size: 0.85em;
+      margin: 0.5rem 0;
+      max-width: 46em;
+    }
+
+    /* ---------- friend chip ---------- */
+    #friendchip {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 20;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.14);
+      border: 2px solid rgba(255, 255, 255, 0.55);
+      border-radius: 999px;
+      padding: 0.35rem 0.9rem;
+      backdrop-filter: blur(3px);
+    }
+    #friendchip b { color: #fff; }
+    #friendchip.pulse { animation: pulse 0.6s ease; }
+    @keyframes pulse {
+      30% { transform: scale(1.18); background: rgba(255, 255, 255, 0.3); }
+    }
+
+    /* ---------- logs pane ---------- */
+    #logs {
+      position: fixed;
+      z-index: 15;
+      background: rgba(140, 60, 0, 0.22);
+      color: rgba(255, 240, 220, 0.82);
+      font-size: 0.72rem;
+      line-height: 1.65;
+    }
+    .logs-title {
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: rgba(255, 244, 228, 0.9);
+      border-bottom: 1px solid rgba(255, 244, 228, 0.25);
+      padding-bottom: 0.4rem;
+      margin-bottom: 0.5rem;
+    }
+    #logbody { overflow: hidden; }
+    .logline { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .logline .t { color: rgba(255, 240, 220, 0.5); margin-right: 0.4rem; }
+    .logline.friend { color: #fff; font-weight: 700; }
+    @media (min-width: 900px) {
+      #logs {
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 290px;
+        border-left: 2px solid rgba(255, 244, 228, 0.25);
+        padding: 1rem 1.1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+      }
+      .logs-title {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 1rem 1.1rem 0.5rem;
+        background: transparent;
+      }
+      #screen { padding-right: calc(290px + 4vw); }
+      #landing { right: 290px; }
+      #friendchip { right: calc(290px + 1.2rem); }
+    }
+    @media (max-width: 899px) {
+      #logs {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-top: 1px solid rgba(255, 244, 228, 0.25);
+        padding: 0.25rem 0.8rem;
+        font-size: 0.66rem;
+      }
+      .logs-title { display: none; }
+      .logline { display: none; }
+      .logline:last-child { display: block; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <h1><img src="biscotti-type.svg" alt="BISCOTTI"></h1>
-    <p>すべて大丈夫だよ :)</p>
-    <a class="play" href="/play">sign up to play 🍪 遊ぼう</a>
-  </main>
-  <a class="logo" href="https://lingonberry.org" title="Lingonberry Organisation">
-    <img src="lingonberry-logo.svg" alt="Lingonberry Organisation">
-  </a>
+  <div id="landing">
+    <p class="boot">biscotti signup terminal ── サインアップ端末 v1.0</p>
+    <div id="hero"><img src="/biscotti-type.svg" alt="BISCOTTI"></div>
+    <p class="tagline">すべて大丈夫だよ :)</p>
+    <form class="promptline" id="nameform" autocomplete="off">
+      <span class="arrow">＞</span>
+      <input id="nameinp" type="text" maxlength="120" placeholder="enter your name to play（名前を入力）"
+             autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+    </form>
+    <p class="hint">press enter ⏎ で参加</p>
+    <a class="lingon" href="https://lingonberry.org" title="Lingonberry Organisation">
+      <img src="/lingonberry-logo.svg" alt="Lingonberry Organisation">
+    </a>
+  </div>
+
+  <div id="screen">
+    <div id="log"></div>
+    <form class="promptline" id="chatline" autocomplete="off">
+      <span class="arrow">＞</span>
+      <input id="chatinp" type="text" maxlength="500" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </form>
+  </div>
+
+  <div id="friendchip" title="friends on the list">🍪 ともだち <b id="friendcount">…</b></div>
+
+  <aside id="logs">
+    <div class="logs-title">/var/log/biscotti ── ログ</div>
+    <div id="logbody"></div>
+  </aside>
+
+  <script>
+    const landing = document.getElementById("landing");
+    const hero = document.getElementById("hero");
+    const nameform = document.getElementById("nameform");
+    const nameinp = document.getElementById("nameinp");
+    const screen = document.getElementById("screen");
+    const log = document.getElementById("log");
+    const chatline = document.getElementById("chatline");
+    const chatinp = document.getElementById("chatinp");
+
+    const FAST = new URLSearchParams(location.search).has("fast");
+    const state = {};
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const scrollDown = () => { screen.scrollTop = screen.scrollHeight; };
+
+    nameinp.focus();
+    document.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("input")) return;
+      setTimeout(() => (document.body.classList.contains("docked") ? chatinp : nameinp).focus(), 0);
+    });
+
+    function fmt(text) {
+      const span = document.createElement("span");
+      span.textContent = text;
+      let html = span.innerHTML;
+      html = html.replace(/([　-〿぀-ゟ゠-ヿ＀-￯一-龯]+)/g, '<span class="jp">$1</span>');
+      return html;
+    }
+
+    async function say(text, { speed = 22, pauseAfter = 420 } = {}) {
+      const line = document.createElement("div");
+      line.className = "b";
+      const body = document.createElement("span");
+      const cursor = document.createElement("span");
+      cursor.className = "cursor";
+      line.appendChild(body);
+      line.appendChild(cursor);
+      log.appendChild(line);
+      scrollDown();
+      if (FAST) {
+        body.innerHTML = fmt(text);
+        scrollDown();
+        cursor.remove();
+        await sleep(30);
+        return;
+      }
+      let shown = "";
+      for (const ch of text) {
+        shown += ch;
+        body.innerHTML = fmt(shown);
+        scrollDown();
+        await sleep(/[。、.!?？！…]/.test(ch) ? speed * 7 : speed);
+      }
+      cursor.remove();
+      await sleep(pauseAfter);
+    }
+
+    function echo(text) {
+      const line = document.createElement("div");
+      line.className = "u";
+      line.textContent = text;
+      log.appendChild(line);
+      scrollDown();
+    }
+
+    function listen(placeholder = "") {
+      return new Promise((resolve) => {
+        chatinp.placeholder = placeholder;
+        chatline.classList.add("on");
+        chatinp.focus();
+        scrollDown();
+        chatline.onsubmit = (e) => {
+          e.preventDefault();
+          const v = chatinp.value.trim();
+          if (!v) return;
+          chatline.classList.remove("on");
+          chatinp.value = "";
+          echo(v);
+          resolve(v);
+        };
+      });
+    }
+
+    async function ask(question, opts, validate) {
+      await say(question, opts);
+      while (true) {
+        const v = await listen(opts && opts.placeholder || "");
+        const problem = validate ? await validate(v) : null;
+        if (!problem) return v;
+        await say(problem);
+      }
+    }
+
+    function dockLogo() {
+      const r = hero.getBoundingClientRect();
+      hero.classList.add("flying");
+      hero.style.top = r.top + "px";
+      hero.style.left = r.left + "px";
+      hero.style.width = r.width + "px";
+      document.body.appendChild(hero);
+      document.body.classList.add("docked");
+      void hero.offsetWidth;
+      hero.style.top = "1rem";
+      hero.style.left = "1.1rem";
+      hero.style.width = "112px";
+    }
+
+    const DUNKS = {
+      "1": "Full submarine (all the way in)",
+      "2": "Polite half-dip",
+      "3": "Speedy in-and-out",
+      "4": "No dunk. Dry crunch only",
+      "5": "I dunk it in something weird",
+    };
+
+    async function chat() {
+      echo(state.name);
+      await sleep(FAST ? 30 : 500);
+      await say(`こんにちは、${state.name}。`);
+      await say("i'm biscotti. 🍪 nice to meet you. すてきな名前。");
+      await say("we should get to know each other a little before you can play. いい？");
+
+      state.email = await ask(
+        "where can i reach you? your email, please.（メールアドレス）",
+        { placeholder: "you@somewhere.com" },
+        (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "hmm… that doesn't look like an email to me. もう一度？"
+      );
+      await say("got it. i'll keep it safe. 約束する。");
+
+      state.fun_fact = await ask(
+        "now the important part. tell me something fun about yourself. no boring answers — i read every single one.",
+        { placeholder: "something fun…" },
+        (v) => v.length >= 10 ? null : "that's it…? 遠慮しないで。give me a little more."
+      );
+      await say("ふふ。i like that. i'm writing it down.");
+
+      await say("okay. quick questionnaire now. i call it HEFE.（ヘフェ）");
+
+      state.hobbies = await ask("H is for hobbies. what do you do for fun?（趣味は？）", { placeholder: "hobbies" });
+      state.entertainment = await ask("E is for entertainment. what are you watching, playing, listening to lately?", { placeholder: "shows, games, music…" });
+      state.favorite_food = await ask("F is for favorite food. 好きな食べ物は？", { placeholder: "favorite food" });
+      state.environment = await ask("E is for environment. where in the world do you live?（どこに住んでる？）", { placeholder: "city, country, forest…" });
+      await say(`${state.environment}… いいね。i've always wanted to go.`);
+
+      state.dunk_style = DUNKS[await ask(
+        "last thing. how do you dunk your biscotti?\n  1. full submarine（全部いく）\n  2. polite half-dip\n  3. speedy in-and-out\n  4. no dunk. dry crunch only\n  5. i dunk it in something weird",
+        { placeholder: "1–5" },
+        (v) => DUNKS[v.trim()] ? null : "just give me a number, 1 to 5. 番号でお願い。"
+      )];
+
+      state.hype = await ask(
+        "and how hyped are you to play, from 1 to 11?",
+        { placeholder: "1–11" },
+        (v) => { const n = parseInt(v, 10); return n >= 1 && n <= 11 ? null : "a number between 1 and 11, please."; }
+      );
+
+      await say("……");
+      await say("sending you up to the cookie cloud…", { speed: 40 });
+
+      let result;
+      try {
+        const res = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+          body: new URLSearchParams(state).toString(),
+        });
+        result = await res.json();
+      } catch {
+        result = null;
+      }
+
+      if (!result || !result.ok) {
+        await say("あれ？ something went wrong on my end. refresh and try me again — ごめんね。");
+        return;
+      }
+      if (result.again) {
+        await say(`${state.name}… you were already on my list. i never forgot you. ♥`);
+      } else if (result.count) {
+        await say(`done. you're on the list, ${state.name} — friend #${result.count}. ともだち。`);
+      } else {
+        await say(`done. you're on the list, ${state.name}.`);
+      }
+      await say("すべて大丈夫だよ :)");
+      await socialMenu([]);
+      await say("i'll email you when it's time to play. またね。 ♥");
+    }
+
+    const SOCIAL = {
+      instagram: { label: "instagram", url: "https://instagram.com/okpasquale" },
+      x: { label: "x（twitter）", url: "https://x.com/okpasquale" },
+      tiktok: { label: "tiktok", url: "https://tiktok.com/@okpasquale" },
+    };
+
+    function followLink(provider) {
+      const div = document.createElement("div");
+      div.className = "sys";
+      const a = document.createElement("a");
+      a.href = SOCIAL[provider].url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = `→ follow pasquale on ${SOCIAL[provider].label} ↗`;
+      a.style.color = "#fff";
+      div.appendChild(a);
+      log.appendChild(div);
+      scrollDown();
+    }
+
+    async function socialMenu(existing) {
+      await say("one more thing. i have a best friend. his name is pasquale. 人間だよ。");
+      await say("if you become real internet friends with him — and he follows you back — you'll get in sooner. 本当。");
+      const connected = new Set((existing || []).map((s) => s.provider));
+      while (true) {
+        const mark = (p) => connected.has(p) ? " ✓" : "";
+        const v = (await ask(
+          `tell me your @ so he knows it's you:\n  1. instagram${mark("instagram")}\n  2. x（twitter）${mark("x")}\n  3. tiktok${mark("tiktok")}\n  4. all done`,
+          { placeholder: "1–4" },
+          (v) => ["1", "2", "3", "4"].includes(v.trim()) ? null : "1, 2, 3 or 4. お願い。"
+        )).trim();
+        if (v === "4") break;
+        const provider = { 1: "instagram", 2: "x", 3: "tiktok" }[v];
+        const handle = await ask(
+          `what's your @ on ${SOCIAL[provider].label}?`,
+          { placeholder: "@you" },
+          (h) => /^@?[\w.\-]{1,64}$/.test(h.trim()) ? null : "that doesn't look like a handle. もう一度？"
+        );
+        try {
+          const res = await fetch("/api/socials", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+            body: new URLSearchParams({ provider, handle }).toString(),
+          });
+          if (!(await res.json()).ok) throw new Error();
+          connected.add(provider);
+          await say(`connected. ✨ now go say hi —`);
+          followLink(provider);
+        } catch {
+          await say("hmm, that didn't save. try again in a moment? ごめん。");
+        }
+      }
+    }
+
+    nameform.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const v = nameinp.value.trim();
+      if (!v) return;
+      state.name = v;
+      dockLogo();
+      chat();
+    });
+
+    async function returningFriend() {
+      let me = null;
+      try {
+        me = await (await fetch("/api/me", { headers: { "Accept": "application/json" } })).json();
+      } catch {}
+      if (!me || !me.name) return;
+      state.name = me.name;
+      nameinp.blur();
+      await sleep(FAST ? 100 : 900);
+      dockLogo();
+      await sleep(FAST ? 30 : 700);
+      await say(`おかえり、${me.name}。hi again :)`);
+      await say("you're already on my list. すべて大丈夫だよ。");
+      if (me.socials && me.socials.length) {
+        await say(`i remember your ${me.socials.map((s) => "@" + s.handle).join(", ")}. ちゃんと覚えてる。`);
+      }
+      await socialMenu(me.socials || []);
+      await say("i'll email you when it's time to play. またね。 ♥");
+    }
+    returningFriend();
+
+    /* ---------- logs pane + live events ---------- */
+    const logbody = document.getElementById("logbody");
+    const friendcount = document.getElementById("friendcount");
+    const friendchip = document.getElementById("friendchip");
+
+    function logLine(text, cls = "") {
+      const div = document.createElement("div");
+      div.className = "logline" + (cls ? " " + cls : "");
+      const t = document.createElement("span");
+      t.className = "t";
+      t.textContent = new Date().toTimeString().slice(0, 8);
+      div.appendChild(t);
+      div.appendChild(document.createTextNode(text));
+      logbody.appendChild(div);
+      while (logbody.children.length > 60) logbody.removeChild(logbody.firstChild);
+    }
+
+    function sysLine(text) {
+      const div = document.createElement("div");
+      div.className = "sys";
+      div.innerHTML = fmt(text);
+      log.appendChild(div);
+      scrollDown();
+    }
+
+    function setCount(n) {
+      friendcount.textContent = n;
+      friendchip.classList.remove("pulse");
+      void friendchip.offsetWidth;
+      friendchip.classList.add("pulse");
+    }
+
+    const BOOT = [
+      "biscotti-os v1.0 booting… 起動中",
+      "mounting cookie jar… ok",
+      "preheating oven to 180°C… ok",
+      "friend engine ready. ともだちエンジン OK",
+      "listening for new friends…",
+    ];
+    const AMBIENT = [
+      "oven temp nominal. 180°C",
+      "crumbs swept. きれい",
+      "cookie jar integrity: 100%",
+      "somewhere, someone is dunking…",
+      "milk levels stable. ミルク OK",
+      "daydreaming… ☁️",
+      "polishing the jar lid…",
+      "humming quietly. ふんふん♪",
+    ];
+    BOOT.forEach((line, i) => setTimeout(() => logLine(line), 300 + i * 550));
+    (function ambient() {
+      setTimeout(() => {
+        logLine(AMBIENT[Math.floor(Math.random() * AMBIENT.length)]);
+        ambient();
+      }, 18000 + Math.random() * 22000);
+    })();
+
+    try {
+      const events = new EventSource("/api/events");
+      events.addEventListener("count", (e) => {
+        setCount(JSON.parse(e.data).count);
+      });
+      events.addEventListener("friend", (e) => {
+        const d = JSON.parse(e.data);
+        setCount(d.count);
+        logLine(`★ new friend: ${d.name}（${d.environment}）`, "friend");
+        if (document.body.classList.contains("docked") && d.name !== state.name) {
+          sysLine(`＊ ${d.name} just became friend #${d.count}. ようこそ。`);
+        }
+      });
+      events.addEventListener("view", () => {
+        logLine("＋ someone opened the cookie jar");
+      });
+    } catch {}
+  </script>
 </body>
 </html>
