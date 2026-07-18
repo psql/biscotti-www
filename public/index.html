@@ -303,6 +303,43 @@
       #cmdhint { bottom: calc(2.3rem + env(safe-area-inset-bottom)); left: 0.8rem; font-size: 0.62rem; }
     }
 
+    /* ---------- progress dots ---------- */
+    #progress {
+      position: fixed;
+      top: 1.35rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: none;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    body.docked #progress { display: flex; }
+    .pdot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 244, 228, 0.55);
+      background: transparent;
+      transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    .pdot.done {
+      background: #fff;
+      border-color: #fff;
+      box-shadow: 0 0 7px rgba(255, 255, 255, 0.65);
+    }
+    .pdot.now {
+      border-color: #fff;
+      animation: pnow 1.2s ease infinite;
+    }
+    @keyframes pnow { 50% { box-shadow: 0 0 8px rgba(255, 255, 255, 0.8); border-color: rgba(255,255,255,0.4); } }
+    @media (min-width: 900px) { #progress { left: calc((100vw - 290px) / 2); } }
+    @media (min-width: 900px) and (max-width: 1120px) { #progress { left: calc((100vw - 230px) / 2); } }
+    @media (max-width: 480px) {
+      #progress { gap: 0.36rem; top: 1.15rem; }
+      .pdot { width: 7px; height: 7px; }
+    }
+
     /* ---------- friend chip ---------- */
     #friendchip {
       position: fixed;
@@ -456,6 +493,7 @@
     </form>
   </div>
 
+  <div id="progress" title="your signup progress"></div>
   <div id="friendchip" title="friends on the list">🍪 ともだち <b id="friendcount">…</b></div>
   <a id="coinchip" href="https://thegivingblock.com/donate/sesame-workshop/" target="_blank" rel="noopener"
      title="creator fees donated to Sesame Workshop — click to give too">🪙 donated <b id="coinval">…</b></a>
@@ -724,6 +762,23 @@
       }
     }
 
+    // Progress dots: one per onboarding step. The bar is never rendered
+    // "perfect" — the last dot stays a pulsing ring even when everything is
+    // done, a little nudge that there's always more to complete.
+    const PROGRESS_STEPS = 10;
+    const progressEl = document.getElementById("progress");
+    for (let i = 0; i < PROGRESS_STEPS; i++) {
+      const d = document.createElement("span");
+      d.className = "pdot";
+      progressEl.appendChild(d);
+    }
+    function setProgress(n) {
+      const filled = Math.min(n, PROGRESS_STEPS - 1);
+      [...progressEl.children].forEach((d, i) => {
+        d.className = "pdot" + (i < filled ? " done" : i === filled ? " now" : "");
+      });
+    }
+
     function dockLogo() {
       const r = hero.getBoundingClientRect();
       hero.classList.add("flying");
@@ -768,6 +823,7 @@
 
     async function chat() {
       echo(state.name);
+      setProgress(1);
       const greetingPromise = fetchGreeting("new", state.name);
       await sleep(FAST ? 30 : 500);
       for (const line of await greetingPromise) {
@@ -779,6 +835,7 @@
         { placeholder: "you@somewhere.com" },
         (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "hmm… that doesn't look like an email to me. もう一度？"
       );
+      setProgress(2);
       await say("got it. i'll keep it safe. 約束する。");
 
       state.fun_fact = await askJudged(
@@ -787,33 +844,40 @@
         { placeholder: "something fun…", reask: "something fun about you. 本当のやつ。" }
       );
 
+      setProgress(3);
       await say("okay. quick questionnaire now. i call it HEFE.（ヘフェ）");
 
       state.hobbies = await askJudged("hobbies",
         "H is for hobbies. what do you do for fun?（趣味は？）",
         { placeholder: "hobbies", reask: "what do you actually do for fun?" });
+      setProgress(4);
       state.entertainment = await askJudged("entertainment",
         "E is for entertainment. what are you watching, playing, listening to lately?",
         { placeholder: "shows, games, music…", reask: "watching, playing, listening — anything real." });
+      setProgress(5);
       state.favorite_food = await askJudged("favorite_food",
         "F is for favorite food. 好きな食べ物は？",
         { placeholder: "favorite food", reask: "your favorite food. ちゃんと。" });
+      setProgress(6);
       state.environment = await askJudged("environment",
         "E is for environment. where in the world do you live?（どこに住んでる？）",
         { placeholder: "city, country, forest…", reask: "where in the world are you, really?" });
 
+      setProgress(7);
       state.dunk_style = DUNKS[await ask(
         "last thing. how do you dunk your biscotti?\n  1. full submarine（全部いく）\n  2. polite half-dip\n  3. speedy in-and-out\n  4. no dunk. dry crunch only\n  5. i dunk it in something weird",
         { placeholder: "1–5" },
         (v) => DUNKS[v.trim()] ? null : "just give me a number, 1 to 5. 番号でお願い。"
       )];
 
+      setProgress(8);
       state.hype = await ask(
         "and how hyped are you to play, from 1 to 11?",
         { placeholder: "1–11" },
         (v) => { const n = parseInt(v, 10); return n >= 1 && n <= 11 ? null : "a number between 1 and 11, please."; }
       );
 
+      setProgress(9);
       await say("……");
       await say("sending you up to the cookie cloud…", { speed: 40 });
 
@@ -841,6 +905,7 @@
         await say(`done. you're on the list, ${state.name}.`);
       }
       await say("すべて大丈夫だよ :)");
+      setProgress(PROGRESS_STEPS);
       await socialMenu([]);
       await say("biscotti will send you a woof when it's your time to play. わん。またね ♥");
       idleLoop();
@@ -932,6 +997,7 @@
       const greetingPromise = fetchGreeting("returning", me.name);
       await sleep(FAST ? 100 : 2600);
       dockLogo();
+      setProgress(PROGRESS_STEPS);
       await sleep(FAST ? 30 : 700);
       for (const line of await greetingPromise) {
         await say(line);
