@@ -101,10 +101,27 @@ async function friendCount() {
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+// Jar-open counter: page views are recorded per hit but broadcast debounced
+// as a single running total so the logs pane doesn't flood under traffic.
+let viewTotal = 0;
+try {
+  const { rows: [v] } = await pool.query("SELECT count(*)::int AS n FROM page_views");
+  viewTotal = v.n;
+} catch {}
+let viewFlush = null;
 app.use((req, _res, next) => {
   if (req.method === "GET" && (req.path === "/" || req.path === "/play")) {
     pool.query("INSERT INTO page_views (path) VALUES ($1)", [req.path])
-      .then(() => broadcast("view", {}))
+      .then(() => {
+        viewTotal++;
+        if (!viewFlush) {
+          viewFlush = setTimeout(() => {
+            viewFlush = null;
+            broadcast("views", { total: viewTotal });
+          }, 3000);
+        }
+      })
       .catch(() => {});
   }
   next();
@@ -121,6 +138,7 @@ app.get("/api/events", async (req, res) => {
   res.flushHeaders();
   try {
     res.write(`event: count\ndata: ${JSON.stringify({ count: await friendCount() })}\n\n`);
+    res.write(`event: views\ndata: ${JSON.stringify({ total: viewTotal })}\n\n`);
   } catch {}
   sseClients.add(res);
   const ping = setInterval(() => {

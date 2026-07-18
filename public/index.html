@@ -1020,8 +1020,19 @@
           sysLine(`＊ ${d.name} just became friend #${d.count}. ようこそ。`);
         }
       });
-      events.addEventListener("view", () => {
-        logLine("＋ someone opened the cookie jar");
+      let jarLine = null;
+      events.addEventListener("views", (e) => {
+        const total = JSON.parse(e.data).total;
+        if (jarLine) jarLine.remove();
+        jarLine = document.createElement("div");
+        jarLine.className = "logline";
+        const t = document.createElement("span");
+        t.className = "t";
+        t.textContent = new Date().toTimeString().slice(0, 8);
+        jarLine.appendChild(t);
+        jarLine.appendChild(document.createTextNode(`＋ ${total.toLocaleString("en-US")} homies have opened the jar`));
+        logbody.appendChild(jarLine);
+        while (logbody.children.length > 60) logbody.removeChild(logbody.firstChild);
       });
       events.addEventListener("donation", (e) => {
         const d = JSON.parse(e.data);
