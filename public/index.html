@@ -1051,7 +1051,11 @@
     BOOT.forEach((line, i) => setTimeout(() => logLine(line), 300 + i * 550));
     (function ambient() {
       setTimeout(() => {
-        logLine(AMBIENT[Math.floor(Math.random() * AMBIENT.length)]);
+        if (Math.random() < 0.3 && coinval.textContent !== "…") {
+          logLine(`🪙 jar check: ${coinval.textContent} donated so far. ありがとう`);
+        } else {
+          logLine(AMBIENT[Math.floor(Math.random() * AMBIENT.length)]);
+        }
         ambient();
       }, 18000 + Math.random() * 22000);
     })();
@@ -1066,8 +1070,13 @@
         }
       });
       let jarLine = null;
-      events.addEventListener("views", (e) => {
-        const total = JSON.parse(e.data).total;
+      const JAR_OPENS = [
+        "＋ someone just opened the jar",
+        "＋ the jar lid creaks open again",
+        "＋ footsteps in the jar room…",
+        "＋ another visitor peeks inside the jar",
+      ];
+      events.addEventListener("views", () => {
         if (jarLine) jarLine.remove();
         jarLine = document.createElement("div");
         jarLine.className = "logline";
@@ -1075,7 +1084,7 @@
         t.className = "t";
         t.textContent = new Date().toTimeString().slice(0, 8);
         jarLine.appendChild(t);
-        jarLine.appendChild(document.createTextNode(`＋ ${total.toLocaleString("en-US")} homies have opened the jar`));
+        jarLine.appendChild(document.createTextNode(JAR_OPENS[Math.floor(Math.random() * JAR_OPENS.length)]));
         logbody.appendChild(jarLine);
         while (logbody.children.length > 60) logbody.removeChild(logbody.firstChild);
       });

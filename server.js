@@ -118,7 +118,7 @@ app.use((req, _res, next) => {
         if (!viewFlush) {
           viewFlush = setTimeout(() => {
             viewFlush = null;
-            broadcast("views", { total: viewTotal });
+            broadcast("views", {});
           }, 3000);
         }
       })
@@ -137,8 +137,7 @@ app.get("/api/events", async (req, res) => {
   });
   res.flushHeaders();
   try {
-    res.write(`event: count\ndata: ${JSON.stringify({ count: await friendCount() })}\n\n`);
-    res.write(`event: views\ndata: ${JSON.stringify({ total: viewTotal })}\n\n`);
+    res.write(":connected\n\n");
   } catch {}
   sseClients.add(res);
   const ping = setInterval(() => {
@@ -211,7 +210,7 @@ app.post("/api/signup", async (req, res) => {
   let count = null;
   try {
     count = await friendCount();
-    broadcast("friend", { name, environment, count });
+    broadcast("friend", { name, environment });
   } catch {}
   if (wantsJson) return res.json({ ok: true, count });
   res.redirect("/thanks");
