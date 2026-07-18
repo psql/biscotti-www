@@ -574,6 +574,9 @@ app.get("/admin", async (req, res) => {
     body { font-family: system-ui, sans-serif; background: #fff7f0; padding: 2rem; }
     h1 { color: #ff7a00; margin-bottom: 0.25rem; }
     .count { color: #7a5230; margin-bottom: 1rem; }
+    #live { color: #2fa14e; font-weight: 700; font-size: 0.85rem; margin-left: 0.5rem; }
+    #live::before { content: "●"; margin-right: 0.3rem; animation: livepulse 1.6s ease infinite; display: inline-block; }
+    @keyframes livepulse { 50% { opacity: 0.25; } }
     .stats { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
     .stat { background: #fff; border-radius: 12px; padding: 0.6rem 1.1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .stat b { display: block; font-size: 1.4rem; color: #ff7a00; }
@@ -588,7 +591,7 @@ app.get("/admin", async (req, res) => {
 </head>
 <body>
   <h1>BISCOTTI waitlist</h1>
-  <p class="count">${rows.length} registration${rows.length === 1 ? "" : "s"}</p>
+  <p class="count">${rows.length} registration${rows.length === 1 ? "" : "s"}<span id="live">live</span></p>
   <div class="stats">
     <div class="stat"><b>${views.total}</b><span>page views (all time)</span></div>
     <div class="stat"><b>${views.today}</b><span>views today</span></div>
@@ -612,6 +615,29 @@ app.get("/admin", async (req, res) => {
       <td>${new Date(r.created_at).toISOString().replace("T", " ").slice(0, 16)}</td>
     </tr>`).join("")}
   </table>
+  <script>
+    // Live view: any activity event re-fetches this page and swaps in the
+    // fresh stats and table without a full reload.
+    const es = new EventSource("/api/events");
+    let pending = null;
+    async function refreshAdmin() {
+      try {
+        const html = await (await fetch(location.href)).text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        for (const sel of [".count", ".stats", "table"]) {
+          const from = doc.querySelector(sel);
+          const to = document.querySelector(sel);
+          if (from && to) to.replaceWith(from);
+        }
+      } catch {}
+    }
+    for (const ev of ["friend", "views", "donation", "count"]) {
+      es.addEventListener(ev, () => {
+        clearTimeout(pending);
+        pending = setTimeout(refreshAdmin, 600);
+      });
+    }
+  </script>
 </body>
 </html>`);
 });
