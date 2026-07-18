@@ -22,8 +22,19 @@ await pool.query(`
     fun_fact TEXT NOT NULL,
     dunk_style TEXT NOT NULL,
     hype INTEGER NOT NULL DEFAULT 11,
+    hobbies TEXT NOT NULL DEFAULT '',
+    entertainment TEXT NOT NULL DEFAULT '',
+    favorite_food TEXT NOT NULL DEFAULT '',
+    environment TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )
+`);
+await pool.query(`
+  ALTER TABLE registrations
+    ADD COLUMN IF NOT EXISTS hobbies TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS entertainment TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS favorite_food TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS environment TEXT NOT NULL DEFAULT ''
 `);
 
 const app = express();
@@ -50,22 +61,38 @@ app.post("/api/signup", async (req, res) => {
   const funFact = clean(req.body.fun_fact, 1000);
   const dunkStyle = clean(req.body.dunk_style, 120);
   const hype = Math.min(11, Math.max(1, parseInt(req.body.hype, 10) || 11));
+  const hobbies = clean(req.body.hobbies, 300);
+  const entertainment = clean(req.body.entertainment, 300);
+  const favoriteFood = clean(req.body.favorite_food, 300);
+  const environment = clean(req.body.environment, 300);
 
-  if (!name || !funFact || !DUNK_STYLES.includes(dunkStyle) ||
+  if (!name || !funFact || !hobbies || !entertainment || !favoriteFood ||
+      !environment || !DUNK_STYLES.includes(dunkStyle) ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if ((req.get("accept") || "").includes("application/json")) {
+      return res.status(400).json({ ok: false });
+    }
     return res.redirect("/play?oops=1");
   }
 
+  const wantsJson = (req.get("accept") || "").includes("application/json");
   try {
     await pool.query(
-      `INSERT INTO registrations (name, email, fun_fact, dunk_style, hype)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [name, email, funFact, dunkStyle, hype]
+      `INSERT INTO registrations
+         (name, email, fun_fact, dunk_style, hype,
+          hobbies, entertainment, favorite_food, environment)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [name, email, funFact, dunkStyle, hype,
+       hobbies, entertainment, favoriteFood, environment]
     );
   } catch (err) {
-    if (err.code === "23505") return res.redirect("/thanks?again=1");
+    if (err.code === "23505") {
+      if (wantsJson) return res.json({ ok: true, again: true });
+      return res.redirect("/thanks?again=1");
+    }
     throw err;
   }
+  if (wantsJson) return res.json({ ok: true });
   res.redirect("/thanks");
 });
 
@@ -117,12 +144,16 @@ app.get("/admin", async (req, res) => {
   <h1>BISCOTTI waitlist</h1>
   <p class="count">${rows.length} registration${rows.length === 1 ? "" : "s"}</p>
   <table>
-    <tr><th>#</th><th>Name</th><th>Email</th><th>Something fun</th><th>Dunk style</th><th>Hype</th><th>When</th></tr>
+    <tr><th>#</th><th>Name</th><th>Email</th><th>Something fun</th><th>Hobbies</th><th>Entertainment</th><th>Fav food</th><th>Lives in</th><th>Dunk style</th><th>Hype</th><th>When</th></tr>
     ${rows.map((r) => `<tr>
       <td>${r.id}</td>
       <td>${esc(r.name)}</td>
       <td>${esc(r.email)}</td>
       <td class="fact">${esc(r.fun_fact)}</td>
+      <td>${esc(r.hobbies)}</td>
+      <td>${esc(r.entertainment)}</td>
+      <td>${esc(r.favorite_food)}</td>
+      <td>${esc(r.environment)}</td>
       <td>${esc(r.dunk_style)}</td>
       <td class="hype">${r.hype}/11</td>
       <td>${new Date(r.created_at).toISOString().replace("T", " ").slice(0, 16)}</td>

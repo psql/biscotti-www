@@ -6,173 +6,297 @@
   <title>BISCOTTI — sign up to play</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+1+Code:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
+    html, body {
+      height: 100%;
+    }
     body {
-      min-height: 100vh;
       background: #ff7a00;
+      background: radial-gradient(120% 120% at 50% 0%, #ff8d1e 0%, #ff7a00 55%, #f26a00 100%);
+      font-family: "M PLUS 1 Code", ui-monospace, "Hiragino Maru Gothic ProN", monospace;
+      color: #fff4e4;
       display: flex;
       flex-direction: column;
       align-items: center;
-      font-family: "M PLUS Rounded 1c", ui-rounded, "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
-      color: #fff;
-      padding: 2rem 1rem 3rem;
     }
-    a.wordmark {
-      width: min(70vw, 420px);
+    header {
+      width: min(92vw, 640px);
+      padding: 1.4rem 0 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      opacity: 0.92;
+    }
+    header a {
       display: block;
-      margin-bottom: 0.75rem;
+      width: 120px;
     }
-    a.wordmark img {
+    header a img {
       width: 100%;
       height: auto;
       display: block;
     }
-    .tagline {
-      font-weight: 800;
-      font-size: 1.1rem;
-      margin-bottom: 2rem;
-    }
-    form {
-      width: min(92vw, 460px);
-      background: #fff;
-      color: #4a2c10;
-      border-radius: 24px;
-      padding: 2rem 1.75rem;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
-      display: flex;
-      flex-direction: column;
-      gap: 1.4rem;
-    }
-    .oops {
-      background: #ffe0e0;
-      color: #a41818;
-      border-radius: 12px;
-      padding: 0.75rem 1rem;
-      font-weight: 800;
-      display: none;
-    }
-    body.show-oops .oops { display: block; }
-    label {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      font-weight: 800;
-      font-size: 0.95rem;
-    }
-    label small {
-      font-weight: 500;
-      color: #a3703d;
-    }
-    input[type="text"],
-    input[type="email"],
-    textarea,
-    select {
-      font: inherit;
-      font-weight: 500;
-      border: 3px solid #ffd9b0;
-      border-radius: 12px;
-      padding: 0.65rem 0.8rem;
-      outline: none;
-      background: #fffaf5;
-      color: inherit;
-    }
-    input:focus, textarea:focus, select:focus {
-      border-color: #ff7a00;
-    }
-    textarea {
-      resize: vertical;
-      min-height: 5.5rem;
-    }
-    .hype-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    input[type="range"] {
-      flex: 1;
-      accent-color: #ff7a00;
-    }
-    .hype-val {
-      font-weight: 800;
-      min-width: 3.2rem;
+    header .sub {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: #ffe0bd;
+      margin-left: auto;
       text-align: right;
-      color: #ff7a00;
+      line-height: 1.5;
     }
-    button {
+    #screen {
+      width: min(92vw, 640px);
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem 0 40vh;
+      line-height: 1.85;
+      font-size: 1rem;
+      scrollbar-width: none;
+    }
+    #screen::-webkit-scrollbar { display: none; }
+    .b {
+      color: #fff4e4;
+      white-space: pre-wrap;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+      margin-bottom: 0.35rem;
+    }
+    .b .jp {
+      color: #ffd9a8;
+    }
+    .u {
+      color: #7a3a00;
+      font-weight: 700;
+      white-space: pre-wrap;
+      margin: 0.4rem 0 0.9rem;
+    }
+    .u::before {
+      content: "＞ ";
+      color: #a85200;
+      font-weight: 400;
+    }
+    .cursor {
+      display: inline-block;
+      width: 0.62em;
+      height: 1.15em;
+      background: #fff4e4;
+      vertical-align: text-bottom;
+      margin-left: 2px;
+      animation: blink 1.05s steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    #inputline {
+      display: none;
+      align-items: baseline;
+      margin-top: 0.5rem;
+    }
+    #inputline.on { display: flex; }
+    #inputline .prompt {
+      color: #ffdcb0;
+      margin-right: 0.5rem;
+      font-weight: 700;
+    }
+    #inp {
+      flex: 1;
       font: inherit;
-      font-weight: 800;
-      font-size: 1.15rem;
-      background: #ff7a00;
-      color: #fff;
+      font-weight: 700;
+      background: transparent;
       border: none;
-      border-radius: 999px;
-      padding: 0.9rem 1rem;
-      cursor: pointer;
-      transition: transform 0.1s ease;
+      outline: none;
+      color: #fff;
+      caret-color: #fff4e4;
     }
-    button:hover { transform: scale(1.03); }
-    button:active { transform: scale(0.98); }
+    #inp::placeholder { color: rgba(255, 244, 228, 0.35); font-weight: 400; }
+    .heart { color: #ffd9a8; }
+    @media (max-width: 480px) {
+      #screen { font-size: 0.92rem; }
+    }
   </style>
 </head>
 <body>
-  <a class="wordmark" href="/"><img src="/biscotti-type.svg" alt="BISCOTTI"></a>
-  <p class="tagline">sign up to play 🍪</p>
+  <header>
+    <a href="/"><img src="/biscotti-type.svg" alt="BISCOTTI"></a>
+    <div class="sub">signup terminal<br>サインアップ端末 v1.0</div>
+  </header>
 
-  <form method="POST" action="/api/signup">
-    <p class="oops">Hmm, something was missing (or your email looked funny). Try again!</p>
-
-    <label>
-      What do people call you?
-      <input type="text" name="name" required maxlength="120" placeholder="Your name">
-    </label>
-
-    <label>
-      Where can we reach you?
-      <input type="email" name="email" required maxlength="254" placeholder="you@somewhere.com">
-    </label>
-
-    <label>
-      Say something fun about yourself
-      <small>Required. No boring answers. We will read every single one.</small>
-      <textarea name="fun_fact" required maxlength="1000" placeholder="I once taught a parrot to whistle the Jurassic Park theme…"></textarea>
-    </label>
-
-    <label>
-      How do you dunk your biscotti?
-      <select name="dunk_style" required>
-        <option value="" disabled selected>Choose your technique</option>
-        <option>Full submarine (all the way in)</option>
-        <option>Polite half-dip</option>
-        <option>Speedy in-and-out</option>
-        <option>No dunk. Dry crunch only</option>
-        <option>I dunk it in something weird</option>
-      </select>
-    </label>
-
-    <label>
-      How hyped are you?
-      <span class="hype-row">
-        <input type="range" name="hype" min="1" max="11" value="11">
-        <span class="hype-val">11/11</span>
-      </span>
-    </label>
-
-    <button type="submit">Put me on the list!</button>
-  </form>
+  <div id="screen">
+    <div id="log"></div>
+    <form id="inputline" autocomplete="off">
+      <span class="prompt">＞</span>
+      <input id="inp" type="text" maxlength="500" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </form>
+  </div>
 
   <script>
-    if (new URLSearchParams(location.search).has("oops")) {
-      document.body.classList.add("show-oops");
+    const log = document.getElementById("log");
+    const screen = document.getElementById("screen");
+    const inputline = document.getElementById("inputline");
+    const inp = document.getElementById("inp");
+
+    const state = {};
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const scrollDown = () => { screen.scrollTop = screen.scrollHeight; };
+
+    function fmt(text) {
+      const span = document.createElement("span");
+      span.textContent = text;
+      let html = span.innerHTML;
+      html = html.replace(/([　-〿぀-ゟ゠-ヿ＀-￯一-龯]+)/g, '<span class="jp">$1</span>');
+      return html;
     }
-    const range = document.querySelector('input[type="range"]');
-    const val = document.querySelector(".hype-val");
-    range.addEventListener("input", () => { val.textContent = range.value + "/11"; });
+
+    const FAST = new URLSearchParams(location.search).has("fast");
+
+    async function say(text, { speed = 22, pauseAfter = 420 } = {}) {
+      const line = document.createElement("div");
+      line.className = "b";
+      const body = document.createElement("span");
+      const cursor = document.createElement("span");
+      cursor.className = "cursor";
+      line.appendChild(body);
+      line.appendChild(cursor);
+      log.appendChild(line);
+      scrollDown();
+      if (FAST) {
+        body.innerHTML = fmt(text);
+        scrollDown();
+        cursor.remove();
+        await sleep(30);
+        return;
+      }
+      let shown = "";
+      for (const ch of text) {
+        shown += ch;
+        body.innerHTML = fmt(shown);
+        scrollDown();
+        await sleep(/[。、.!?？！…]/.test(ch) ? speed * 7 : speed);
+      }
+      cursor.remove();
+      await sleep(pauseAfter);
+    }
+
+    function echo(text) {
+      const line = document.createElement("div");
+      line.className = "u";
+      line.textContent = text;
+      log.appendChild(line);
+      scrollDown();
+    }
+
+    function listen(placeholder = "") {
+      return new Promise((resolve) => {
+        inp.placeholder = placeholder;
+        inputline.classList.add("on");
+        inp.focus();
+        scrollDown();
+        inputline.onsubmit = (e) => {
+          e.preventDefault();
+          const v = inp.value.trim();
+          if (!v) return;
+          inputline.classList.remove("on");
+          inp.value = "";
+          echo(v);
+          resolve(v);
+        };
+      });
+    }
+
+    async function ask(question, opts, validate) {
+      await say(question, opts);
+      while (true) {
+        const v = await listen(opts && opts.placeholder || "");
+        const problem = validate ? await validate(v) : null;
+        if (!problem) return v;
+        await say(problem);
+      }
+    }
+
+    const DUNKS = {
+      "1": "Full submarine (all the way in)",
+      "2": "Polite half-dip",
+      "3": "Speedy in-and-out",
+      "4": "No dunk. Dry crunch only",
+      "5": "I dunk it in something weird",
+    };
+
+    async function main() {
+      await sleep(600);
+      await say("…", { speed: 220 });
+      await say("こんにちは。");
+      await say("hi. i'm biscotti. 🍪");
+      await say("before you can play, we should get to know each other a little. いい？");
+
+      state.name = await ask("first — what do people call you?（お名前は？）", { placeholder: "your name" });
+      await say(`${state.name}. すてきな名前。nice to meet you.`);
+
+      state.email = await ask(
+        "where can i reach you? your email, please.（メールアドレス）",
+        { placeholder: "you@somewhere.com" },
+        (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "hmm… that doesn't look like an email to me. もう一度？"
+      );
+      await say("got it. i'll keep it safe. 約束する。");
+
+      state.fun_fact = await ask(
+        "now the important part. tell me something fun about yourself. no boring answers — i read every single one.",
+        { placeholder: "something fun…" },
+        (v) => v.length >= 10 ? null : "that's it…? 遠慮しないで。give me a little more."
+      );
+      await say("ふふ。i like that. i'm writing it down.");
+
+      await say("okay. quick questionnaire now. i call it HEFE.（ヘフェ）");
+
+      state.hobbies = await ask("H is for hobbies. what do you do for fun?（趣味は？）", { placeholder: "hobbies" });
+      state.entertainment = await ask("E is for entertainment. what are you watching, playing, listening to lately?", { placeholder: "shows, games, music…" });
+      state.favorite_food = await ask("F is for favorite food. 好きな食べ物は？", { placeholder: "favorite food" });
+      state.environment = await ask("E is for environment. where in the world do you live?（どこに住んでる？）", { placeholder: "city, country, forest…" });
+      await say(`${state.environment}… いいね。i've always wanted to go.`);
+
+      state.dunk_style = DUNKS[await ask(
+        "last thing. how do you dunk your biscotti?\n  1. full submarine（全部いく）\n  2. polite half-dip\n  3. speedy in-and-out\n  4. no dunk. dry crunch only\n  5. i dunk it in something weird",
+        { placeholder: "1–5" },
+        (v) => DUNKS[v.trim()] ? null : "just give me a number, 1 to 5. 番号でお願い。"
+      )];
+
+      state.hype = await ask(
+        "and how hyped are you to play, from 1 to 11?",
+        { placeholder: "1–11" },
+        (v) => { const n = parseInt(v, 10); return n >= 1 && n <= 11 ? null : "a number between 1 and 11, please."; }
+      );
+
+      await say("……");
+      await say("sending you up to the cookie cloud…", { speed: 40 });
+
+      let result;
+      try {
+        const res = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+          body: new URLSearchParams(state).toString(),
+        });
+        result = await res.json();
+      } catch {
+        result = null;
+      }
+
+      if (!result || !result.ok) {
+        await say("あれ？ something went wrong on my end. refresh and try me again — ごめんね。");
+        return;
+      }
+      if (result.again) {
+        await say(`${state.name}… you were already on my list. i never forgot you. <3`.replace("<3", "♥"));
+      } else {
+        await say(`done. you're on the list, ${state.name}.`);
+      }
+      await say("すべて大丈夫だよ :)");
+      await say("i'll email you when it's time to play. またね。 ♥");
+    }
+
+    main();
   </script>
 </body>
 </html>
