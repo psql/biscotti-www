@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "TanakiLingonberry";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "TanakiLingoberry69!";
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -547,17 +547,37 @@ const esc = (s) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
   );
 
-app.get("/admin", async (req, res) => {
+const authFails = new Map(); // ip -> { count, resetAt }
+function adminAuthOk(req, res) {
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "?";
+  const rec = authFails.get(ip);
+  const now = Date.now();
+  if (rec && rec.resetAt < now) authFails.delete(ip);
+  if (rec && rec.resetAt >= now && rec.count >= 8) {
+    res.status(429).send("Too many attempts. Come back later. 🍪");
+    return false;
+  }
   const auth = req.headers.authorization || "";
   const [scheme, encoded] = auth.split(" ");
   const password = scheme === "Basic" && encoded
     ? Buffer.from(encoded, "base64").toString().split(":").slice(1).join(":")
-    : null;
-
-  if (password !== ADMIN_PASSWORD) {
+    : "";
+  const a = Buffer.from(String(password));
+  const b = Buffer.from(ADMIN_PASSWORD);
+  const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (!ok) {
+    const cur = authFails.get(ip) || { count: 0, resetAt: now + 15 * 60 * 1000 };
+    cur.count++;
+    authFails.set(ip, cur);
     res.set("WWW-Authenticate", 'Basic realm="biscotti admin"');
-    return res.status(401).send("Password required");
+    res.status(401).send("Password required");
+    return false;
   }
+  return true;
+}
+
+app.get("/admin", async (req, res) => {
+  if (!adminAuthOk(req, res)) return;
 
   const { rows } = await pool.query(`
     SELECT r.*,
@@ -615,7 +635,7 @@ app.get("/admin", async (req, res) => {
     ${rows.map((r) => `<tr>
       <td>${r.id}</td>
       <td>${esc(r.name)}</td>
-      <td>${esc(r.email)}</td>
+      <td class="em" data-e="${Buffer.from(r.email).toString("base64")}"></td>
       <td class="fact">${esc(r.fun_fact)}</td>
       <td>${esc(r.hobbies)}</td>
       <td>${esc(r.entertainment)}</td>
@@ -630,6 +650,14 @@ app.get("/admin", async (req, res) => {
   <script>
     // Live view: any activity event re-fetches this page and swaps in the
     // fresh stats and table without a full reload.
+    // Cloudflare email-obfuscation dodge: emails arrive base64-encoded and
+    // are written into the DOM by JS, which scrape shields never rewrite.
+    function decodeEmails() {
+      document.querySelectorAll("td[data-e]").forEach((el) => {
+        try { el.textContent = atob(el.dataset.e); } catch {}
+      });
+    }
+    decodeEmails();
     const es = new EventSource("/api/events");
     let pending = null;
     async function refreshAdmin() {
@@ -641,6 +669,7 @@ app.get("/admin", async (req, res) => {
           const to = document.querySelector(sel);
           if (from && to) to.replaceWith(from);
         }
+        decodeEmails();
       } catch {}
     }
     for (const ev of ["friend", "views", "donation", "count"]) {
