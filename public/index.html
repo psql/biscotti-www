@@ -50,12 +50,27 @@
       font-size: 1.25rem;
       font-weight: 800;
     }
+    .play {
+      display: inline-block;
+      background: #fff;
+      color: #ff7a00;
+      font-weight: 800;
+      font-size: 1.25rem;
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 0.9rem 2.2rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      transition: transform 0.1s ease;
+    }
+    .play:hover { transform: scale(1.05); }
+    .play:active { transform: scale(0.97); }
   </style>
 </head>
 <body>
   <main>
     <h1><img src="biscotti-type.svg" alt="BISCOTTI"></h1>
     <p>すべて大丈夫だよ :)</p>
+    <a class="play" href="/play">sign up to play 🍪</a>
   </main>
   <a class="logo" href="https://lingonberry.org" title="Lingonberry Organisation">
     <img src="lingonberry-logo.svg" alt="Lingonberry Organisation">

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BISCOTTI — sign up to play</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      min-height: 100vh;
+      background: #ff7a00;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: "M PLUS Rounded 1c", ui-rounded, "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+      color: #fff;
+      padding: 2rem 1rem 3rem;
+    }
+    a.wordmark {
+      width: min(70vw, 420px);
+      display: block;
+      margin-bottom: 0.75rem;
+    }
+    a.wordmark img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .tagline {
+      font-weight: 800;
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+    }
+    form {
+      width: min(92vw, 460px);
+      background: #fff;
+      color: #4a2c10;
+      border-radius: 24px;
+      padding: 2rem 1.75rem;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+    }
+    .oops {
+      background: #ffe0e0;
+      color: #a41818;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      font-weight: 800;
+      display: none;
+    }
+    body.show-oops .oops { display: block; }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+    label small {
+      font-weight: 500;
+      color: #a3703d;
+    }
+    input[type="text"],
+    input[type="email"],
+    textarea,
+    select {
+      font: inherit;
+      font-weight: 500;
+      border: 3px solid #ffd9b0;
+      border-radius: 12px;
+      padding: 0.65rem 0.8rem;
+      outline: none;
+      background: #fffaf5;
+      color: inherit;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: #ff7a00;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 5.5rem;
+    }
+    .hype-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: #ff7a00;
+    }
+    .hype-val {
+      font-weight: 800;
+      min-width: 3.2rem;
+      text-align: right;
+      color: #ff7a00;
+    }
+    button {
+      font: inherit;
+      font-weight: 800;
+      font-size: 1.15rem;
+      background: #ff7a00;
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 0.9rem 1rem;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    button:hover { transform: scale(1.03); }
+    button:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+  <a class="wordmark" href="/"><img src="/biscotti-type.svg" alt="BISCOTTI"></a>
+  <p class="tagline">sign up to play 🍪</p>
+
+  <form method="POST" action="/api/signup">
+    <p class="oops">Hmm, something was missing (or your email looked funny). Try again!</p>
+
+    <label>
+      What do people call you?
+      <input type="text" name="name" required maxlength="120" placeholder="Your name">
+    </label>
+
+    <label>
+      Where can we reach you?
+      <input type="email" name="email" required maxlength="254" placeholder="you@somewhere.com">
+    </label>
+
+    <label>
+      Say something fun about yourself
+      <small>Required. No boring answers. We will read every single one.</small>
+      <textarea name="fun_fact" required maxlength="1000" placeholder="I once taught a parrot to whistle the Jurassic Park theme…"></textarea>
+    </label>
+
+    <label>
+      How do you dunk your biscotti?
+      <select name="dunk_style" required>
+        <option value="" disabled selected>Choose your technique</option>
+        <option>Full submarine (all the way in)</option>
+        <option>Polite half-dip</option>
+        <option>Speedy in-and-out</option>
+        <option>No dunk. Dry crunch only</option>
+        <option>I dunk it in something weird</option>
+      </select>
+    </label>
+
+    <label>
+      How hyped are you?
+      <span class="hype-row">
+        <input type="range" name="hype" min="1" max="11" value="11">
+        <span class="hype-val">11/11</span>
+      </span>
+    </label>
+
+    <button type="submit">Put me on the list!</button>
+  </form>
+
+  <script>
+    if (new URLSearchParams(location.search).has("oops")) {
+      document.body.classList.add("show-oops");
+    }
+    const range = document.querySelector('input[type="range"]');
+    const val = document.querySelector(".hype-val");
+    range.addEventListener("input", () => { val.textContent = range.value + "/11"; });
+  </script>
+</body>
+</html>
