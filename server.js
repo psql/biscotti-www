@@ -60,10 +60,15 @@ await pool.query(`
 await pool.query(`
   CREATE TABLE IF NOT EXISTS donations (
     id SERIAL PRIMARY KEY,
-    amount_sol NUMERIC NOT NULL,
+    amount_sol NUMERIC,
     tx TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )
+`);
+await pool.query(`
+  ALTER TABLE donations
+    ADD COLUMN IF NOT EXISTS amount_usd NUMERIC,
+    ALTER COLUMN amount_sol DROP NOT NULL
 `);
 
 const COOKIE_SECRET = process.env.COOKIE_SECRET || "biscotti-jar-secret";
@@ -292,6 +297,81 @@ app.get("/api/greeting", async (req, res) => {
   }
 });
 
+// HEFE answer judge: Tanaki reacts to each questionnaire answer for real,
+// pushes back on non-answers, and BOOs jerks (profanity / degen crypto spam).
+const REACT_FALLBACKS = {
+  ok: ["noted. いいね。", "logged. ありがとう。", "mm. that goes in the warm file. 🍪"],
+  bullshit: [
+    "that's not a real answer, friend. もう一度。",
+    "my registry politely rejects that. try again, properly. ね？",
+    "biscotti twitched in his sleep. answer for real, please.",
+  ],
+  jerk: [
+    "BOO. don't be a jerk. 🍪 answer nicely and we can keep going.",
+    "BOO. don't be a jerk. rude bytes get swept out of the jar. try again.",
+  ],
+};
+const JERK_RE = /\b(fuck\w*|shit\w*|bitch\w*|cunt|asshole\w*|dickhead\w*|wen ?(moon|lambo)|ngmi|wagmi|shitcoin\w*|rug ?pull\w*|pump ?(it|and ?dump)|ape ?in|degen\w*|to the moon|1000x|diamond ?hands)\b/i;
+
+function cannedReaction(verdict) {
+  const pool = REACT_FALLBACKS[verdict];
+  return { verdict, reply: pool[Math.floor(Math.random() * pool.length)] };
+}
+function heuristicReaction(answer) {
+  if (JERK_RE.test(answer)) return cannedReaction("jerk");
+  if (answer.trim().length < 2) return cannedReaction("bullshit");
+  return cannedReaction("ok");
+}
+
+app.post("/api/hefe-react", async (req, res) => {
+  const field = clean(req.body.field, 40);
+  const question = clean(req.body.question, 300);
+  const answer = clean(req.body.answer, 600);
+  const name = clean(req.body.name, 60) || "friend";
+  if (!answer) return res.json(cannedReaction("bullshit"));
+  if (!anthropic) return res.json(heuristicReaction(answer));
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-8",
+      max_tokens: 1024,
+      system: TANAKI_SYSTEM + `
+
+You are judging a guest's answer to one field of your signup questionnaire (the HEFE questionnaire: Hobbies, Entertainment, Favorite food, Environment — plus a fun-fact question). Classify the answer:
+
+- "jerk": contains cursing, slurs, harassment, or degenerate crypto-bro content (pump/dump talk, wen moon, lambo, shilling coins, ape in, rug pulls, 1000x hype). Your reply MUST begin exactly with "BOO. don't be a jerk." followed by one short line telling them to answer for real. Stay warm underneath — disappointed OS, not angry.
+- "bullshit": a non-answer — gibberish, keyboard mash, "idk"/"nothing"/"you tell me", evasion, obvious trolling, or something that ignores the question. Reply with one short line insisting they actually answer; vary the phrasing, keep it playful but firm. Genuine short answers are NOT bullshit ("pizza" is a real favorite food; "naps" is a real hobby).
+- "ok": a genuine answer. Reply with ONE warm, specific line reacting to the actual content of their answer — reference it, riff on it, be delighted by it. Never generic.
+
+Address them by name occasionally, not every time.`,
+      output_config: {
+        effort: "low",
+        format: {
+          type: "json_schema",
+          schema: {
+            type: "object",
+            properties: {
+              verdict: { type: "string", enum: ["ok", "bullshit", "jerk"] },
+              reply: { type: "string" },
+            },
+            required: ["verdict", "reply"],
+            additionalProperties: false,
+          },
+        },
+      },
+      messages: [{
+        role: "user",
+        content: `Guest name: ${name}\nQuestion (field "${field}"): ${question}\nTheir answer: ${answer}`,
+      }],
+    });
+    if (response.stop_reason === "refusal") throw new Error("refused");
+    const parsed = JSON.parse(response.content.find((b) => b.type === "text")?.text);
+    if (!["ok", "bullshit", "jerk"].includes(parsed.verdict) || !parsed.reply) throw new Error("bad shape");
+    res.json({ verdict: parsed.verdict, reply: String(parsed.reply).slice(0, 300) });
+  } catch {
+    res.json(heuristicReaction(answer));
+  }
+});
+
 // Donation jar: the fee-claimer reports each claimed creator fee here.
 let solPrice = { at: 0, usd: 0 };
 async function solUsd() {
@@ -307,16 +387,23 @@ async function solUsd() {
   return solPrice.usd || 0;
 }
 
-app.get("/api/donations", async (_req, res) => {
+async function donationTotals() {
   const { rows: [d] } = await pool.query(
-    "SELECT COALESCE(sum(amount_sol), 0) AS sol, count(*)::int AS n FROM donations"
+    `SELECT COALESCE(sum(amount_sol), 0) AS sol,
+            COALESCE(sum(amount_usd), 0) AS usd,
+            count(*)::int AS n
+     FROM donations`
   );
   const price = await solUsd();
-  res.json({
+  return {
     donatedSol: Number(d.sol),
-    donatedUsd: Math.round(Number(d.sol) * price * 100) / 100,
+    donatedUsd: Math.round((Number(d.usd) + Number(d.sol) * price) * 100) / 100,
     count: d.n,
-  });
+  };
+}
+
+app.get("/api/donations", async (_req, res) => {
+  res.json(await donationTotals());
 });
 
 app.post("/api/donations", async (req, res) => {
@@ -324,22 +411,26 @@ app.post("/api/donations", async (req, res) => {
   if (!key || req.get("x-donation-key") !== key) {
     return res.status(401).json({ ok: false });
   }
-  const amount = Number(req.body.amount_sol);
+  const amountSol = req.body.amount_sol != null ? Number(req.body.amount_sol) : null;
+  const amountUsd = req.body.amount_usd != null ? Number(req.body.amount_usd) : null;
   const tx = req.body.tx ? String(req.body.tx).slice(0, 120) : null;
-  if (!(amount > 0) || amount > 100000) return res.status(400).json({ ok: false });
+  const solOk = amountSol != null && amountSol > 0 && amountSol <= 100000;
+  const usdOk = amountUsd != null && amountUsd > 0 && amountUsd <= 10000000;
+  if (!solOk && !usdOk) return res.status(400).json({ ok: false });
   try {
-    await pool.query("INSERT INTO donations (amount_sol, tx) VALUES ($1, $2)", [amount, tx]);
+    await pool.query(
+      "INSERT INTO donations (amount_sol, amount_usd, tx) VALUES ($1, $2, $3)",
+      [solOk ? amountSol : null, usdOk ? amountUsd : null, tx]
+    );
   } catch (err) {
     if (err.code === "23505") return res.json({ ok: true, dup: true });
     throw err;
   }
-  const { rows: [d] } = await pool.query(
-    "SELECT COALESCE(sum(amount_sol), 0) AS sol FROM donations"
-  );
   const price = await solUsd();
+  const totals = await donationTotals();
   broadcast("donation", {
-    amountUsd: Math.round(amount * price * 100) / 100,
-    totalUsd: Math.round(Number(d.sol) * price * 100) / 100,
+    amountUsd: Math.round(((usdOk ? amountUsd : 0) + (solOk ? amountSol * price : 0)) * 100) / 100,
+    totalUsd: totals.donatedUsd,
   });
   res.json({ ok: true });
 });

@@ -662,21 +662,25 @@
       }
     });
 
-    const IDLE_REPLIES = [
-      "ふふ。i'm listening. try /help if you're bored.",
-      "that's nice. °˖✧ tell me more, or /help.",
-      "noted. i write everything down in crumbs.",
-      "biscotti（asleep, dreaming）: わん…？",
+    const SLEEP_REPLIES = [
+      "*zzz* … tanakiOS is in standby. /help はいつでも起きてる。",
+      "（sleeping）… biscotti woofs softly from another room. try /help.",
+      "standby mode. commands only ── /help. おやすみ。",
+      "*the terminal hums quietly* … /help if you need me.",
     ];
+    // After the conversation ends, the OS goes back to sleep: commands still
+    // work, but there's no open-ended chat.
     async function idleLoop() {
+      await say("i'm going back to sleep now. standby ── /help stays awake. おやすみ ♥");
+      logLine("tanakiOS entering standby… おやすみ");
       while (true) {
-        const v = await listen("type help ── or just talk to me");
-        const word = v.trim().toLowerCase().split(/\s+/)[0];
+        const v = await listen("TanakiOS standby ── /help");
+        const word = v.trim().toLowerCase().split(/\s+/)[0].replace(/^\//, "");
         if (COMMAND_NAMES.includes(word)) {
           runCommand("/" + word);
           continue;
         }
-        await say(IDLE_REPLIES[Math.floor(Math.random() * IDLE_REPLIES.length)], { pauseAfter: 100 });
+        sysLine(SLEEP_REPLIES[Math.floor(Math.random() * SLEEP_REPLIES.length)]);
       }
     }
 
@@ -687,6 +691,36 @@
         const problem = validate ? await validate(v) : null;
         if (!problem) return v;
         await say(problem);
+      }
+    }
+
+    async function judgeAnswer(field, question, answer) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 12000);
+        const r = await fetch("/api/hefe-react", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ field, question, answer, name: state.name }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        const d = await r.json();
+        if (d && d.verdict && d.reply) return d;
+      } catch {}
+      return { verdict: "ok", reply: "noted. いいね。" };
+    }
+
+    // Tanaki reads every answer for real: genuine ones get a genuine reaction,
+    // non-answers get pushed back on until the field is actually filled out.
+    async function askJudged(field, question, opts) {
+      await say(question, opts);
+      while (true) {
+        const v = await listen(opts && opts.placeholder || "");
+        const r = await judgeAnswer(field, question, v);
+        await say(r.reply);
+        if (r.verdict === "ok") return v;
+        await say("so ── same question. " + (opts && opts.reask || "答えて。"));
       }
     }
 
@@ -747,20 +781,26 @@
       );
       await say("got it. i'll keep it safe. 約束する。");
 
-      state.fun_fact = await ask(
+      state.fun_fact = await askJudged(
+        "fun_fact",
         "now the important part. tell me something fun about yourself. no boring answers — i read every single one.",
-        { placeholder: "something fun…" },
-        (v) => v.length >= 10 ? null : "that's it…? 遠慮しないで。give me a little more."
+        { placeholder: "something fun…", reask: "something fun about you. 本当のやつ。" }
       );
-      await say("ふふ。i like that. i'm writing it down.");
 
       await say("okay. quick questionnaire now. i call it HEFE.（ヘフェ）");
 
-      state.hobbies = await ask("H is for hobbies. what do you do for fun?（趣味は？）", { placeholder: "hobbies" });
-      state.entertainment = await ask("E is for entertainment. what are you watching, playing, listening to lately?", { placeholder: "shows, games, music…" });
-      state.favorite_food = await ask("F is for favorite food. 好きな食べ物は？", { placeholder: "favorite food" });
-      state.environment = await ask("E is for environment. where in the world do you live?（どこに住んでる？）", { placeholder: "city, country, forest…" });
-      await say(`${state.environment}… いいね。i've always wanted to go.`);
+      state.hobbies = await askJudged("hobbies",
+        "H is for hobbies. what do you do for fun?（趣味は？）",
+        { placeholder: "hobbies", reask: "what do you actually do for fun?" });
+      state.entertainment = await askJudged("entertainment",
+        "E is for entertainment. what are you watching, playing, listening to lately?",
+        { placeholder: "shows, games, music…", reask: "watching, playing, listening — anything real." });
+      state.favorite_food = await askJudged("favorite_food",
+        "F is for favorite food. 好きな食べ物は？",
+        { placeholder: "favorite food", reask: "your favorite food. ちゃんと。" });
+      state.environment = await askJudged("environment",
+        "E is for environment. where in the world do you live?（どこに住んでる？）",
+        { placeholder: "city, country, forest…", reask: "where in the world are you, really?" });
 
       state.dunk_style = DUNKS[await ask(
         "last thing. how do you dunk your biscotti?\n  1. full submarine（全部いく）\n  2. polite half-dip\n  3. speedy in-and-out\n  4. no dunk. dry crunch only\n  5. i dunk it in something weird",
@@ -827,10 +867,18 @@
     }
 
     async function socialMenu(existing) {
+      const connected = new Set((existing || []).map((s) => s.provider));
+      if (connected.size >= Object.keys(SOCIAL).length) {
+        await say("and you're already connected everywhere ── instagram, x, tiktok. 完璧。");
+        return;
+      }
       await say("one more thing. biscotti has a best friend. his name is pasquale. 人間だよ。");
       await say("if you become real internet friends with him — and he follows you back — you'll get in sooner. 本当。");
-      const connected = new Set((existing || []).map((s) => s.provider));
       while (true) {
+        if (connected.size >= Object.keys(SOCIAL).length) {
+          await say("that's all three. フルコンプ。pasquale will know it's you everywhere.");
+          break;
+        }
         const mark = (p) => connected.has(p) ? " ✓" : "";
         const v = (await ask(
           `tell me your @ so he knows it's you:\n  1. instagram${mark("instagram")}\n  2. x（twitter）${mark("x")}\n  3. tiktok${mark("tiktok")}\n  4. all done`,
@@ -862,8 +910,10 @@
 
     nameform.addEventListener("submit", (e) => {
       e.preventDefault();
+      if (state.started) return;
       const v = nameinp.value.trim();
       if (!v) return;
+      state.started = true;
       state.name = v;
       dockLogo();
       chat();
@@ -875,6 +925,8 @@
         me = await (await fetch("/api/me", { headers: { "Accept": "application/json" } })).json();
       } catch {}
       if (!me || !me.name) return;
+      if (state.started) return;
+      state.started = true;
       state.name = me.name;
       nameinp.blur();
       const greetingPromise = fetchGreeting("returning", me.name);
