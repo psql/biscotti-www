@@ -415,10 +415,12 @@ async function solUsd() {
 }
 
 // BISCOTTI is a pump.fun charity coin: swap fees flow to the charity wallet.
-// True donated total = that wallet's cumulative fees minus its pre-launch
-// baseline, fetched live and cached; launch-day figure is the offline floor.
+// True donated total = sum of that wallet's daily fees since launch day.
+// The API's cumulativeCreatorFeeSOL only spans the returned window, which
+// shifts daily, so subtracting a fixed baseline from it drifts; summing
+// daily buckets is stable. Launch-day figure is the offline floor.
 const CHARITY_WALLET = "1u4k6SowzbLSb5KYBt64pxpHi2XkiqUjSZtZdLideAd";
-const CHARITY_BASELINE_SOL = 72.835698365; // cumulative on 2026-07-16, day before launch
+const CHARITY_LAUNCH_DAY = "2026-07-17";
 const CHARITY_FLOOR_SOL = 418.065129135;   // launch-day fees for this coin
 let charityCache = { at: 0, sol: CHARITY_FLOOR_SOL };
 async function charityFeesSol() {
@@ -429,7 +431,9 @@ async function charityFeesSol() {
       { signal: AbortSignal.timeout(8000) }
     );
     const rows = await r.json();
-    const sol = Number(rows[rows.length - 1].cumulativeCreatorFeeSOL) - CHARITY_BASELINE_SOL;
+    const sol = rows
+      .filter((b) => b.bucket >= CHARITY_LAUNCH_DAY)
+      .reduce((sum, b) => sum + Number(b.creatorFeeSOL), 0);
     if (sol > 0) charityCache = { at: Date.now(), sol };
   } catch {}
   return charityCache.sol;
